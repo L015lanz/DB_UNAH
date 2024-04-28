@@ -1,38 +1,10 @@
+{% extends 'base.html' %}
 {%load static%}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor Base de Datos</title>
-    <link rel="stylesheet" href="{%static 'css/main.css'%}">
-    <link rel="stylesheet" href="{%static 'css/index.css'%}">
-</head>
-<body>
-    
-<section class="container nav-container">
-    <nav class="navbar-DB">
-        <section class="section-img">  
-            <img src="{%static 'images/python.png'%}" class="navbar-img">
-            <img src="{%static 'images/Oracle.png'%}" class="navbar-img">
-        </section>
-        <ul class="ul-nav">
-            <li class="li-nav">
-                <a href="" class="a-nav">Procedimientos Almacenados</a>
-            </li>
-            <li class="li-nav">
-                <a href="" class="a-nav">Diccionario de Datos</a>
-            </li>
-            <li class="li-nav">
-                <a href="" class="a-nav">Secuencias</a>
-            </li>
-        </ul>
-       
-    </nav>
-</section>
 
-<section class="container body-container">
-
+{% block style %}
+<link rel="stylesheet" href="{%static 'css/index.css'%}">
+{%endblock%}
+{% block content %}
     <div id="Card-introduccion">
         <section id="introduction">
             <div id="myname">
@@ -78,13 +50,4 @@
     </div>
 </section>
 
-
-<section class="container footer-container">
-    <div class="footer-info">Diseñado por: Ing. Luis Lainez</div>
-    <div class="footer-info">Correo Electronico: luisglainezw001@gmail.com</div>
-    <div class="footer-info">Linkedin: tal XD</div>
-    <div class="footer-info">Telefono: +504 9250-6839</div>
-</section>
-<script src="https://kit.fontawesome.com/3ddafbe7b7.js" crossorigin="anonymous"></script>
-</body>
-</html>
+{%endblock%}

@@ -50,10 +50,17 @@
 .projects-container{
     background-color: #1f1f1f;
     padding: 20px 30px 20px 30px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
 }
 
 
 .project{
-    padding: 100px;
+    padding: 130px;
     background-color: coral;
+}
+
+.project:hover{
+    background-color: darkgreen;
 }

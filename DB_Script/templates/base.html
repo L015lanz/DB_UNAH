@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visor Base de Datos</title>
     <link rel="stylesheet" href="{%static 'css/main.css'%}">
+    {% block style %}
+{%endblock%}
 </head>
 <body>
     
@@ -30,31 +32,26 @@
     </nav>
 </section>
 
-<section class="container ">
+<section class="container body-container">
 
-    <div id="Card-introduccion">
-        <section id="introduccion">
-            <div id="myname">
-                Hola, mi Nombre es Luis Lainez
-            </div>
-            <div id="welcome">
-                Bienvenidos a mi portafolio         
-            </div>
-        </section>
-        <section id="description-page">
-            <i class="fa-solid fa-database"></i>
-            <p>
-                En este momento estamos en la aplicacion web DB_UNAH.
-            </p>
-            <p>
-                Es una aplicacion la cual pretende mostrar cada parte de la base de datos diseñada y construida para simular el funcionamiento de los sistemas de Admisiones, Matricula y Campus Virtual de la Universidad Nacional Autónoma de Honduras. Se incluyen Procedimientos Almacenados, Secuencias, Tablas y Datos incrustados en la misma.
-            </p>
-            <p>
-                Esta es la version 1.0.0, en futuras versiones se incluiran otros proyectos y mejoras a esta aplicacion web
-            </p>
-        </section>
-    </div>
-    <i class="fa-solid fa-angles-down"></i>
+
+
+
+
+    {% block content %}
+    {% endblock %}
+    
+<section class="container footer-container">
+    <section class="footer-section">
+        <div class="footer-info">Correo Electronico: luisglainezw001@gmail.com</div>
+        <div class="footer-info">Linkedin: tal XD</div>
+        <div class="footer-info">Telefono: +504 9250-6839</div>
+        
+    </section>
+    <section class="footer-section">
+        <div class="footer-info">Diseñado por: Ing. Luis Lainez</div>
+    </section>
+
 </section>
 <script src="https://kit.fontawesome.com/3ddafbe7b7.js" crossorigin="anonymous"></script>
 </body>
