@@ -1,0 +1,59 @@
+#Card-introduccion{
+    padding: 40px;
+    box-shadow: 0px 0px 14px 0px rgba(122,122,122,1);
+    width: 55rem;
+    margin: 50px 50px 40px 50px;
+    border-radius: 10px;
+    background-color: white;
+}
+
+.desc-img{
+    height: 120px;
+    width: auto;
+}
+#myname{
+    font-size: 21px;
+    font-weight: bold;
+    color: #c92020;
+    margin-bottom: 20px;
+}
+#welcome{
+    font-size: 19px;
+    font-weight: 500;
+    margin-bottom: 30px;
+}
+
+.div-img-descripcion{
+    display: flex;
+    justify-content: space-around;
+}
+
+.fa-database{
+ font-size: 120px;
+ color: #c92020;
+}
+
+.scroll-btn{
+    color: rgb(54, 54, 54);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+.fa-angles-down{
+    color: rgb(54, 54, 54);
+    font-size: 22px;   
+}
+
+
+.projects-container{
+    background-color: #1f1f1f;
+    padding: 20px 30px 20px 30px;
+}
+
+
+.project{
+    padding: 100px;
+    background-color: coral;
+}
