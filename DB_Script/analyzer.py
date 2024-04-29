@@ -14,24 +14,23 @@ class analyzer:
         self.nameDB='"C##DBAUNAH"'
 
 
-    def find_statements(self,filename):
+    def find_statements(self,filename,statement_type):
         dir_file = os.path.join(STATIC_ROOT, 'script')
         route_file = os.path.join(dir_file, filename)
         with open(route_file, 'r') as rf:
             for line in rf:
                 line.strip()
                 if line.strip()!='':
-                    pattern_statment = re.compile(r'"C##DBAUNAH"\."(\w+)"')
+                    pattern_statment = re.compile(fr'{statement_type}"C##DBAUNAH"\."(\w+)"')
                     self.list_statement.extend(pattern_statment.findall(line.strip()))
 
-    def sequence_details(self,filename,statement_name):
+    def sequence_details(self,filename,statement_name,statement_type):
         dir_file = os.path.join(STATIC_ROOT, 'script')
         route_file = os.path.join(dir_file, filename)
         with open(route_file, 'r') as rf:
-                pattern_statment = re.compile(fr'"C##DBAUNAH"\."{statement_name.upper()}"([^;]+);')
+                pattern_statment = re.compile(fr'{statement_type}"C##DBAUNAH"\."{statement_name.upper()}"([^;]+);')
                 info=pattern_statment.findall(rf.read())
                 pattern = re.compile(r'MINVALUE (\d+) MAXVALUE (\d+) INCREMENT BY (\d+) START WITH (\d+) CACHE (\d+) (\w+)')
-                print(info[0].strip())
 
                 match = pattern.match(info[0].strip())
                 if match:
@@ -56,3 +55,13 @@ class analyzer:
                 return sequence_json
     
               
+    def statement_content(self,filename,statement_name,statement_type):
+            dir_file = os.path.join(STATIC_ROOT, 'script')
+            route_file = os.path.join(dir_file, filename)
+            with open(route_file, 'r') as rf:
+                    pattern_statment = re.compile(fr'{statement_type}"C##DBAUNAH"\."{statement_name.upper()}"([^°]+)°')
+                    info=pattern_statment.findall(rf.read())
+            json={
+                 "CONTENT":info
+            }
+            return json

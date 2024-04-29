@@ -1,0 +1,48 @@
+
+.row{
+    width: 55rem;
+}
+
+.info{
+
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    border: 1px solid rgb(143, 143, 143);
+    padding: 15px;
+    background-color: white;
+}
+.statements_names{
+    align-self: center;
+    color: rgb(24, 24, 24);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.information{
+    font-size: 18px;
+    font-weight: 500;
+    color: #c92020;
+}
+
+
+.json {
+    margin-top: 0;
+    font-family: monospace;
+    background-color: #f8f8f8;
+    padding: 10px;
+    border: 1px solid rgb(175, 15, 15);
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    white-space: pre-wrap; 
+    word-wrap: break-word; 
+}
+
+
+.table_statement{
+    margin-top: 40px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+
+    margin-bottom: 60px;
+}

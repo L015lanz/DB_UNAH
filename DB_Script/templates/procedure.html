@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{%load static%}
+
+{% block style %}
+<link rel="stylesheet" href="{%static 'css/procedure.css'%}">
+{%endblock%}
+{% block content %}
+
+<div class="table-statement">
+{% for name in statements_names%}
+    <section class="row" onclick="moreinfo('{{name.lower}}')">
+    <div class="info">
+        <div  class="statements_names">{{name}}</div>
+        <div  class="information" onclick="moreinfo('{{name.lower}}')">info <i class="fa-solid fa-plus"></i></div>
+    </div>
+    <section id="{{name.lower}}"></section>
+    </section>
+{% endfor%}
+</div>
+
+<script src="{%static 'js/procedure.js'%}"></script>
+{%endblock%}
+
+
+
+
+

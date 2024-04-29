@@ -1,0 +1,3044 @@
+°
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."ADICIONAR_ASIGNATURA" (resultado OUT VARCHAR2,PN_CUENTA VARCHAR2 ,PSECCION VARCHAR2)
+IS 
+p_REQUISITO VARCHAR2(20);
+CONTADOR NUMBER;
+contador2 Number;
+--Nuevos
+
+ NHORAI INTERVAL DAY TO SECOND;
+ NHORAF INTERVAL DAY TO SECOND;
+ p_carrera_jefe  VARCHAR2(10);
+ vlu number;
+ vma number;
+ vmi number;  
+ vju number;
+ vvi number;
+ vsa number;
+ vdo number; 
+  nlu number;
+ nma number;
+ nmi number; 
+ nju number;
+ nvi number;
+ nsa number;
+ ndo number; 
+ vnombreSECCION varchar2(50);
+ VNHORAI INTERVAL DAY TO SECOND;
+ VNHORAF INTERVAL DAY TO SECOND;
+ CONTADOR3 VARCHAR(5);
+ vduracion  varchar2(5);
+ va�o varchar2(8); 
+ vperiodo number; 
+ vnomseccion varchar2(10);
+ vcontador4 number;
+ vunidades number;
+ vdias number;
+ bunidades number;
+ fechaActual date;
+ contador5 number;
+
+
+BEGIN
+
+select distinct id_requisito into p_REQUISITO from requisitos 
+inner join seccion  on requisitos.id_asignatura = seccion.asignatura_cod
+where seccion.id = PSECCION;
+
+
+select count(*) INTO CONTADOR from matricula 
+inner join seccion on matricula.seccion_id = seccion.id
+inner join asignatura on seccion.asignatura_cod = asignatura.cod
+inner join requisitos on asignatura.cod = requisitos.id_asignatura
+where matricula.estudiante_n_cuenta = PN_CUENTA and requisitos.id_ASIGNATURA = p_REQUISITO and matricula.estado_mat_id = 4 and round(matricula.calificacion)>65;
+
+
+select count(*) INTO CONTADOR2 from seccion
+inner join matricula on matricula.seccion_id=seccion.id
+where matricula.estudiante_n_cuenta=PN_CUENTA and seccion.id=PSECCION;
+
+select HORAINCIO,HORAFINAL,lunes,martes,miercoles,jueves,viernes,sabado,domingo INTO NHORAI,NHORAF,nlu,nma,nmi,nju,nvi,nsa,ndo from seccion
+where seccion.id=pseccion;
+
+--UNAH4 SI HAY TRASLAPE
+
+IF(CONTADOR2!=0) THEN
+resultado:='UNAH2';
+ELSIF (CONTADOR!=0) THEN
+resultado:='UNAH1';
+ELSIF p_REQUISITO='NULL' THEN
+resultado:='UNAH1';
+ELSE
+ resultado:= 'UNAH3';
+END IF;
+
+
+DECLARE
+ cursor seccion is select SECCION.HORAINCIO,SECCION.HORAFINAL,seccion.NOMBRE || '-' || asignatura.nombre as clase,
+ seccion.lunes,seccion.martes,seccion.miercoles,seccion.jueves,seccion.viernes,seccion.sabado,seccion.domingo 
+f rom seccion 
+inner join matricula on seccion.id=matricula.seccion_id
+inner join asignatura on asignatura.cod=seccion.asignatura_cod
+where matricula.estudiante_n_cuenta=pn_cuenta and matricula.estado_mat_id='1';
+
+BEGIN
+
+
+open seccion;
+
+loop
+fetch seccion INTO 
+ VNHORAI,
+ VNHORAF ,
+  vnombreSECCION,
+  vlu,
+   vma,
+   vmi,
+   vju,
+   vvi,
+   vsa,
+   vdo
+ ;
+exit when seccion%notfound;
+
+--'UNAH1' HORAS MAL SELECCIONADAS
+--'UNAH2' TRASLAPE DOCENTE
+--'UNAH3' TRASLAPE AULA
+--'UNAH4' CREACION CORRECTA
+
+   IF((nlu=vlu and nlu!=0) or (nma=vma and nma!=0) or (nmi=vmi and nmi!=0) or (nju=vju and nju!=0) or (nvi=vvi and nvi!=0) or (nsa=vsa and nsa!=0) or (ndo=vdo and ndo!=0)) then 
+   IF ((NHORAI>=VNHORAI and NHORAI<VNHORAF) OR (NHORAF>VNHORAI and NHORAF<=VNHORAF) OR (VNHORAI>=NHORAI and VNHORAI<NHORAF) OR (VNHORAF>NHORAI and VNHORAF<=NHORAF)) then
+        RESULTADO:='UNAH4';
+        exit;
+   end if;
+   end if;   
+
+end loop;
+
+close seccion;
+
+
+
+END;
+
+
+
+
+IF(RESULTADO='UNAH4') THEN
+   RESULTADO:='TRASLAPE CON: '||vnombreSECCION;
+ELSIF (RESULTADO='UNAH2') THEN
+    UPDATE matricula
+set estado_mat_id='1'
+where matricula.estudiante_n_cuenta=PN_CUENTA and matricula.seccion_id=PSECCION;
+INSERT INTO "C##DBAUNAH"."EVALUACION" (ID_EVALUACION, FK_SECCION_ID, N_CUENTA, EVALUADA) VALUES (SQ_EVALUACIONES.NEXTVAL, PSECCION, PN_CUENTA, '0');
+RESULTADO:='ASIGNATURA ADICIONADA CORRECTAMENTE';
+commit;
+
+ELSIF(RESULTADO='UNAH3') THEN
+     RESULTADO:='LE HACE FALTA EL REQUISITO';
+ELSIF(RESULTADO='UNAH1') THEN
+ INSERT INTO "C##DBAUNAH"."MATRICULA" (ESTUDIANTE_N_CUENTA, SECCION_ID, ESTADO_MAT_ID) VALUES (PN_CUENTA, PSECCION, '1');
+INSERT INTO "C##DBAUNAH"."EVALUACION" (ID_EVALUACION, FK_SECCION_ID, N_CUENTA, EVALUADA) VALUES (SQ_EVALUACIONES.NEXTVAL, PSECCION, PN_CUENTA, '0');
+COMMIT;
+RESULTADO:='ASIGNATURA ADICIONADA CORRECTAMENTE';
+ELSE
+    RESULTADO:=NULL;
+
+END IF;
+
+
+
+EXCEPTION
+WHEN OTHERS THEN
+   DBMS_OUTPUT.PUT_LINE(SQLERRM);
+RESULTADO:='HUBO UN ERROR AL MATRICULAR LA SECCION';
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure AGRANDAR_CUPOS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."AGRANDAR_CUPOS" (MENSAJE OUT VARCHAR2, p_CUPOS NUMBER, p_ID_SECCION VARCHAR2) IS
+  nuevos_cupos_disponibles NUMBER;
+  cupos_disponibles number;
+BEGIN
+  BEGIN
+    -- Iniciar una transacci�n
+    BEGIN
+      
+     SELECT cupos INTO cupos_disponibles FROM seccion WHERE id = p_ID_SECCION; 
+        
+      -- Incrementar los cupos en la tabla seccion
+      UPDATE seccion SET cupos = p_CUPOS WHERE id = p_ID_SECCION;
+
+      -- Calcular la cantidad de nuevos cupos disponibles
+     nuevos_cupos_disponibles:= p_CUPOS - cupos_disponibles;
+ 
+      COMMIT;
+    EXCEPTION
+      WHEN OTHERS THEN
+
+        MENSAJE := null;
+        DBMS_OUTPUT.PUT_LINE(MENSAJE);
+        ROLLBACK;
+        RETURN;
+    END;
+    
+
+    -- Actualizar los estados de los estudiantes en lista de espera a matriculados
+    BEGIN
+      UPDATE matricula
+      SET estado_mat_id = '1' 
+      WHERE seccion_id = p_ID_SECCION
+        AND estado_mat_id = '3' 
+        AND ROWNUM <= nuevos_cupos_disponibles;
+
+      COMMIT;
+    EXCEPTION
+      WHEN OTHERS THEN
+
+        MENSAJE := null;
+        DBMS_OUTPUT.PUT_LINE(MENSAJE);
+        ROLLBACK;
+        RETURN;
+    END;
+
+    MENSAJE := 'Cupos actualizados exitosamente';
+  END;
+END AGRANDAR_CUPOS;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure AGREGAR_FOTO_PERFIL
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."AGREGAR_FOTO_PERFIL" (mensaje out varchar2, PCUENTA VARCHAR2,PFOTO VARCHAR2)
+IS
+CONTADOR NUMBER;
+BEGIN
+
+SELECT COUNT(*) INTO CONTADOR FROM FOTO_PERFIL
+WHERE N_CUENTA=PCUENTA;
+
+IF CONTADOR<3 then
+
+INSERT INTO "C##DBAUNAH"."FOTO_PERFIL" (N_CUENTA, FOTO) VALUES (PCUENTA, PFOTO);
+commit;
+MENSAJE:='FOTO AGREGADA CON EXITO';
+else
+MENSAJE:='YA CUENTA CON 3 FOTOS DE PERFIL';
+end if;
+
+exception
+when others then
+mensaje:=null;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure AGREGAR_VIDEO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."AGREGAR_VIDEO" (mensaje OUT VARCHAR2, VSeccion VARCHAR2, VVIDEO VARCHAR2)
+IS
+BEGIN
+  UPDATE SECCION
+  SET VIDEO = VVIDEO
+  WHERE ID = VSeccion;
+
+  mensaje := 'Video agregado correctamente.';
+  COMMIT;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    mensaje := 'La secci�n especificada no fue encontrada.';
+  WHEN OTHERS THEN
+    mensaje := 'Ocurri� un error al agregar el video.';
+END AGREGAR_VIDEO;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure ASIGNATURAS_CARRERA_JEFE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."ASIGNATURAS_CARRERA_JEFE" (c_ASIGNATURAS OUT SYS_REFCURSOR, p_N_EMPLEADO VARCHAR2)IS
+p_carrera_jefe VARCHAR2(8 CHAR);
+BEGIN 
+
+  
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente
+  WHERE n_empleado = p_N_EMPLEADO;
+
+  OPEN c_ASIGNATURAS FOR SELECT COD,NOMBRE FROM ASIGNATURA WHERE DEPTO_ID = p_carrera_jefe AND  NOMBRE <> 'NULL';
+
+
+    EXCEPTION
+  WHEN OTHERS THEN 
+
+    DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure CANCELAR_ASIGNATURA_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CANCELAR_ASIGNATURA_ESTUDIANTE" (resultado OUT VARCHAR2,PN_CUENTA VARCHAR2 ,PSECCION VARCHAR2)
+IS 
+
+BEGIN
+  -- Obtener Duracion del periodo
+
+
+UPDATE MATRICULA
+  SET ESTADO_MAT_ID =  '2'
+  WHERE ESTUDIANTE_N_CUENTA=PN_CUENTA AND SECCION_ID=PSECCION; -- Cambia esto por la condici�n que determine qu� filas actualizar
+
+
+delete from evaluacion where N_CUENTA = PN_CUENTA and FK_SECCION_ID = PSECCION;
+
+
+  COMMIT; 
+resultado:='ASIGNATURA CANCELADA EXITOSAMENTE';
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure CANCELAR_SECCION
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CANCELAR_SECCION" (MENSAJE OUT VARCHAR2, p_ID_SECCION VARCHAR2, p_JUSTIFICACION VARCHAR2)IS
+BEGIN 
+    UPDATE SECCION SET ESTADO = 0, 
+    JUSTIFICACION = p_JUSTIFICACION
+    WHERE ID = p_ID_SECCION;
+    
+    DELETE FROM MATRICULA
+    WHERE SECCION_ID = p_ID_SECCION;
+
+    MENSAJE:= 'SE CANCELO LA SECCION';
+ 
+ 
+    COMMIT;
+ 
+
+EXCEPTION
+  WHEN OTHERS THEN
+    MENSAJE:= null;
+    DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure CARGA_ACADEMICA
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CARGA_ACADEMICA" (c_CARGA OUT SYS_REFCURSOR, p_N_EMPLEADO VARCHAR2)IS 
+ p_carrera_jefe  VARCHAR2(20);
+BEGIN 
+
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente 
+  WHERE n_empleado = p_N_EMPLEADO;
+ 
+OPEN c_CARGA FOR SELECT DISTINCT SECCION.ID,seccion.nombre,ASIGNATURA.COD,ASIGNATURA.NOMBRE,DOCENTE.N_EMPLEADO,persona.primernombre|| ' ' || persona.primerapellido as Nombre_DOCENTE,SECCION.CUPOS,EDIFICIO.NOMBRE,AULA.NOMBRE,
+SUBSTR(TO_CHAR(seccion.horaincio, 'HH:MI'), 5, 5) AS hora_inicio,SUBSTR(TO_CHAR(seccion.horafinal, 'HH:MI'), 5, 5) AS hora_final
+FROM seccion
+INNER JOIN asignatura ON seccion.asignatura_cod = asignatura.cod
+INNER JOIN DOCENTE ON DOCENTE.N_EMPLEADO = seccion.DOCENTE_N_EMPLEADO
+INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI=PERSONA.DNI
+INNER JOIN AULA ON AULA.ID = seccion.AULA_ID
+INNER JOIN EDIFICIO ON EDIFICIO.ID = EDIFICIO_ID  
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (SYSDATE BETWEEN FEC_INI_PLAN AND FEC_FINAL_PLAN) AND DOCENTE.DEPT_CENTRO_ID= p_carrera_jefe and seccion.ESTADO!=0
+ORDER BY ASIGNATURA.COD ASC, hora_inicio ASC;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure CARRERAS_CENTRO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CARRERAS_CENTRO" (CARRERAS OUT SYS_REFCURSOR,rcentro_ID varchar2)IS
+BEGIN
+
+OPEN CARRERAS for select car_disponible.id, carrera.nom_carrera  FROM
+    CENTRO
+INNER JOIN
+    CAR_DISPONIBLE ON CAR_DISPONIBLE.CENTRO_ID = CENTRO.ID
+INNER JOIN
+    CARRERA ON CAR_DISPONIBLE.CARRERA_ID = CARRERA.ID where centro.id=rcentro_id;
+
+
+    EXCEPTION
+     WHEN OTHERS THEN
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure CREAR_ASPIRANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CREAR_ASPIRANTE" (CONFIRMACION OUT VARCHAR2, DNI VARCHAR2,PRIMER_NOMBRE VARCHAR2,SEGUNDO_NOMBRE VARCHAR2, PRIMER_APELLIDO VARCHAR2,SEGUNDO_APELLIDO VARCHAR2, DIRECCION VARCHAR2,
+CORREO_ELECTRONICO VARCHAR2,FOTOCERTIFICADO VARCHAR2,CENTRO_ID VARCHAR2,CAR_DISPONIBLE_ID VARCHAR2, CAR_DISPONIBLE_ID2 VARCHAR2,TELEFONO VARCHAR2) IS
+
+BEGIN
+DECLARE
+cod_tipo1 varchar2(10);
+cod_tipo2 varchar2(10);
+BEGIN
+
+ INSERT INTO PERSONA VALUES (DNI ,PRIMER_NOMBRE ,SEGUNDO_NOMBRE , PRIMER_APELLIDO ,SEGUNDO_APELLIDO , DIRECCION ,CORREO_ELECTRONICO ,TELEFONO);
+
+
+ INSERT INTO ASPIRANTE VALUES (DNI, FOTOCERTIFICADO ,CENTRO_ID ,CAR_DISPONIBLE_ID,'1',0);
+
+ INSERT INTO EXAMEN_ADMISION(id_exam,tipo_exam_id,aspirante_persona_dni) VALUES(sq_exam_admision.nextval, '1', DNI);
+
+ SELECT c.ex_extra INTO cod_tipo1
+  FROM car_disponible cd
+  INNER JOIN carrera c ON c.id = cd.carrera_id
+  WHERE cd.id = CAR_DISPONIBLE_ID;
+  if cod_tipo1 is not null then
+  INSERT INTO EXAMEN_ADMISION(id_exam,tipo_exam_id,aspirante_persona_dni,aspirante_car_disponible_id) VALUES(sq_exam_admision.nextval, cod_tipo1, DNI, CAR_DISPONIBLE_ID);
+ end if;
+ INSERT INTO ASPIRANTE VALUES (DNI, FOTOCERTIFICADO ,CENTRO_ID ,CAR_DISPONIBLE_ID2,'2',0);
+
+  SELECT c.ex_extra INTO cod_tipo2
+  FROM car_disponible cd
+  INNER JOIN carrera c ON c.id = cd.carrera_id
+  WHERE cd.id = CAR_DISPONIBLE_ID2;
+
+  if cod_tipo1 is null and cod_tipo2 is not null then
+  INSERT INTO EXAMEN_ADMISION(id_exam,tipo_exam_id,aspirante_persona_dni,aspirante_car_disponible_id) VALUES(sq_exam_admision.nextval, cod_tipo2, DNI, CAR_DISPONIBLE_ID);
+  end if;
+  if cod_tipo1<>cod_tipo2 and cod_tipo2 is not null then
+   INSERT INTO EXAMEN_ADMISION(id_exam,tipo_exam_id,aspirante_persona_dni,aspirante_car_disponible_id) VALUES(sq_exam_admision.nextval, cod_tipo2, DNI, CAR_DISPONIBLE_ID);
+  end if;
+
+ COMMIT;
+
+ CONFIRMACION := 'SE HA AGREGADO EL ASPIRANTE';
+
+EXCEPTION
+   WHEN DUP_VAL_ON_INDEX THEN
+        -- Maneja la excepci�n de clave primaria duplicada
+    CONFIRMACION:='YA EXISTE UNA PERSONA REGISTRADA CON ESE DNI Y/O CORREO ELECTRONICO';
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    CONFIRMACION:= null;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+END;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure CREAR_DOCENTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CREAR_DOCENTE" (CONFIRMACION OUT VARCHAR2, DNI VARCHAR2,PRIMER_NOMBRE VARCHAR2,SEGUNDO_NOMBRE VARCHAR2, PRIMER_APELLIDO VARCHAR2,SEGUNDO_APELLIDO VARCHAR2, DIRECCION VARCHAR2,
+CORREO_ELECTRONICO VARCHAR2, CONTRASE�A VARCHAR2, FOTOEMPLEADO VARCHAR2, PROL_ID VARCHAR2, PDEPT_DISPONIBLE_ID VARCHAR2,TELEFONO VARCHAR2 ) IS
+ANIO number;
+CONTADOR1 NUMBER;
+CONTADOR2 NUMBER;
+VVerificacion varchar2(10);
+BEGIN
+
+select count(*) into contador1 from Docente WHERE DEPT_CENTRO_ID=PDEPT_DISPONIBLE_ID and rol_id='2';
+select count(*) into contador2 from Docente WHERE DEPT_CENTRO_ID=PDEPT_DISPONIBLE_ID and rol_id='3';
+
+vverificacion:='UNAH0';
+if((contador1!=0) AND PROL_ID='2') then
+    vverificacion:='UNAH1'; 
+elsif((contador2!=0) AND PROL_ID='3') then
+    vverificacion:='UNAH2';
+end if;
+
+
+    
+    if(vverificacion='UNAH0') then
+        INSERT INTO PERSONA VALUES (DNI ,PRIMER_NOMBRE ,SEGUNDO_NOMBRE , PRIMER_APELLIDO ,SEGUNDO_APELLIDO , DIRECCION ,
+        CORREO_ELECTRONICO,TELEFONO );        
+        SELECT EXTRACT(YEAR FROM sysdate)+ 1 into ANIO FROM dual;        
+        INSERT INTO DOCENTE VALUES (ANIO || SQ_DOCENTES.NEXTVAL,CONTRASE�A,FOTOEMPLEADO,DNI,pROL_ID,PDEPT_DISPONIBLE_ID,PDEPT_DISPONIBLE_ID);        
+        COMMIT;
+        
+        CONFIRMACION := 'SE HA AGREGADO EL DOCENTE';
+        elsif (vverificacion='UNAH1') then
+        CONFIRMACION:= 'YA EXISTE UN JEFE DE DEPARTAMENTO';
+        elsif (vverificacion='UNAH2') then
+        CONFIRMACION:= 'YA EXISTE UN COORDINADOR DE DEPARTAMENTO';
+  end if;
+
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        -- Maneja la excepci�n de clave primaria duplicada
+    CONFIRMACION:='YA EXISTE UNA PERSONA REGISTRADA CON ESE DNI Y/O CORREO ELECTRONICO';
+
+  WHEN OTHERS THEN
+  
+  
+    -- Manejo de excepciones
+    CONFIRMACION:= null;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure CREAR_SECCIONES
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CREAR_SECCIONES" (CONFIRMACION OUT VARCHAR2,p_N_EMPLEADO varchar2,PASIGNATURA VARCHAR2,PDOCENTE VARCHAR2,LU NUMBER, MA NUMBER, MI NUMBER, JU NUMBER, VI NUMBER,SA NUMBER,
+DO NUMBER,PHORA_INI VARCHAR2, PHORA_FIN VARCHAR2, PAULA VARCHAR2, PCUPOS NUMBER,pDURACION VARCHAR2) 
+IS 
+ NHORAI INTERVAL DAY TO SECOND;
+ NHORAF INTERVAL DAY TO SECOND;
+ p_carrera_jefe  VARCHAR2(10);
+ vlu number;
+ vma number;
+ vmi number; 
+ vju number;
+ vvi number;
+ vsa number;
+ vdo number; 
+ vnombreDOCENTE varchar2(50);
+  vnombreAULA varchar2(50);
+ VNHORAI INTERVAL DAY TO SECOND;
+ VNHORAF INTERVAL DAY TO SECOND;
+ CONTADOR VARCHAR(5);
+ vduracion  varchar2(5);
+ va�o varchar2(8); 
+ vperiodo number; 
+ vnomseccion varchar2(10);
+ vcontador2 number;
+ vunidades number;
+ vdias number;
+ bunidades number;
+ fechaActual date;
+ contador3 number;
+  
+
+BEGIN
+
+
+
+SELECT SYSDATE into  fechaActual FROM dual;
+
+ 
+
+
+select PERIODO_PERIODO,PERIODO_A�O INTO vperiodo,va�o 
+from config_period 
+where  (fechaActual BETWEEN FEC_INI_PLAN AND FEC_FINAL_PLAN) and PERIODO_DURACION_ID=PDURACION;
+
+  
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente
+  WHERE n_empleado = p_N_EMPLEADO;
+ 
+
+
+NHORAI := TO_DSINTERVAL('0 ' || PHORA_INI || ':00:00');
+NHORAF := TO_DSINTERVAL('0 ' || PHORA_FIN || ':00:00');
+
+
+select count(*) into contador3 from seccion 
+inner join docente on seccion.docente_n_empleado=docente.n_empleado INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI=PERSONA.DNI
+where docente.DEPT_CENTRO_ID=p_carrera_jefe
+and duracion_id=pduracion and a�o_id=va�o and periodo_id=vperiodo;
+
+DBMS_OUTPUT.PUT_LINE(contador3);
+IF contador3!=0 then
+
+declare
+
+ cursor docentes is select SECCION.HORAINCIO,SECCION.HORAFINAL,PERSONA.PRIMERNOMBRE || ' ' || PERSONA.PRIMERAPELLIDO,
+ seccion.lunes,seccion.martes,seccion.miercoles,seccion.jueves,seccion.viernes,seccion.sabado,seccion.domingo from seccion 
+inner join docente on seccion.docente_n_empleado=docente.n_empleado INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI=PERSONA.DNI
+where docente.DEPT_CENTRO_ID=p_carrera_jefe and docente.n_empleado=pdocente 
+and duracion_id=pduracion and a�o_id=va�o and periodo_id=vperiodo;
+
+cursor aulas is select seccion.horaincio,seccion.horafinal,aula.nombre,
+seccion.lunes,seccion.martes,seccion.miercoles,seccion.jueves,seccion.viernes,seccion.sabado,seccion.domingo
+from seccion inner join aula on seccion.aula_id=aula.id
+inner join aula_asig on aula.id=aula_asig.aula_id
+where aula_asig.dept_centro_id=p_carrera_jefe AND AULA.ID=PAULA
+and duracion_id=pduracion and a�o_id=va�o and periodo_id=vperiodo;
+
+begin
+
+open docentes;
+CONFIRMACION:='UNAH4';
+
+loop
+fetch docentes INTO 
+ VNHORAI,
+ VNHORAF ,
+  vnombreDOCENTE,
+  vlu,
+   vma,
+   vmi,
+   vju,
+   vvi,
+   vsa,
+   vdo
+ ;
+exit when docentes%notfound;
+
+--'UNAH1' HORAS MAL SELECCIONADAS
+--'UNAH2' TRASLAPE DOCENTE
+--'UNAH3' TRASLAPE AULA
+--'UNAH4' CREACION CORRECTA
+
+
+IF(NHORAI<NHORAF) THEN
+
+   IF((lu=vlu and lu!=0) or (ma=vma and ma!=0) or (mi=vmi and mi!=0) or (ju=vju and ju!=0) or (vi=vvi and vi!=0) or (sa=vsa and sa!=0) or (do=vdo and do!=0)) then 
+   IF ((NHORAI>=VNHORAI and NHORAI<VNHORAF) OR (NHORAF>VNHORAI and NHORAF<=VNHORAF) OR (VNHORAI>=NHORAI and VNHORAI<NHORAF) OR (VNHORAF>NHORAI and VNHORAF<=NHORAF)) then
+        CONFIRMACION:='UNAH2';
+        exit;
+   end if;
+   end if;   
+ELSE
+   CONFIRMACION:='UNAH1';   
+END IF  ; 
+
+end loop;
+
+close docentes;
+
+
+
+open aulas;
+
+loop
+fetch aulas INTO 
+ VNHORAI,
+ VNHORAF ,
+  vnombreAULA,
+  vlu,
+   vma,
+   vmi,
+   vju,
+   vvi,
+   vsa,
+   vdo
+  
+ ;
+exit when aulas%notfound;
+
+--'UNAH1'
+--'UNAH2'
+--'UNAH3'
+
+
+
+
+IF(NHORAI<NHORAF) THEN
+
+   IF((lu=vlu and lu!=0) or (ma=vma and ma!=0) or (mi=vmi and mi!=0) or (ju=vju and ju!=0) or (vi=vvi and vi!=0) or (sa=vsa and sa!=0) or (do=vdo and do!=0)) then 
+   IF ((NHORAI>=VNHORAI and NHORAI<VNHORAF) OR (NHORAF>VNHORAI and NHORAF<=VNHORAF) OR (VNHORAI>=NHORAI and VNHORAI<NHORAF) OR (VNHORAF>NHORAI and VNHORAF<=NHORAF)) then
+        CONFIRMACION:='UNAH3'; 
+        exit;
+   end if;
+   end if;   
+ELSE
+   CONFIRMACION:='UNAH1';   
+END IF  ; 
+
+end loop;
+
+close aulas;
+
+
+select uv into vunidades from asignatura where cod = PASIGNATURA;
+vdias := lu + ma +  mi +    ju  +   vi +   sa +   do;
+bunidades:=vdias * (TO_NUMBER(SUBSTR(NHORAF, 5, 2)) - TO_NUMBER(SUBSTR(NHORAI, 5, 2)));
+if( bunidades!= vunidades) then 
+confirmacion :='UNAH0';
+END IF;
+
+
+
+
+
+IF(CONFIRMACION='UNAH1') THEN
+    CONFIRMACION:='HORARIO INVALIDO';
+ELSIF (CONFIRMACION='UNAH0') THEN
+    CONFIRMACION:='NO CORRESPONDE EL HORARIO SELECCIONADO CON LAS UNIDADES VALORATIVAS DE LA ASIGNTURA';
+ELSIF(CONFIRMACION='UNAH2') THEN
+    CONFIRMACION:='EXISTE UN TRASLAPE DEL DOCENTE: ' || VNOMBREDOCENTE;
+ELSIF(CONFIRMACION='UNAH3') THEN
+    CONFIRMACION:='EXISTE UN TRASLAPE DE AULA: ' || VNOMBREAULA;
+ELSIF(CONFIRMACION='UNAH4') THEN
+     vnomseccion:=TO_CHAR(EXTRACT(HOUR FROM NHORAI));
+    select count(*) into vcontador2 from seccion where seccion.nombre like vnomseccion||'%' and asignatura_cod=PASIGNATURA
+    and duracion_id=pduracion and a�o_id=va�o and periodo_id=vperiodo;
+    vnomseccion:=vnomseccion||TO_CHAR(vcontador2, 'FM00');
+    
+   
+    INSERT INTO SECCION VALUES (SQ_SECCIONES.NEXTVAL,VNOMSECCION,NHORAI, NHORAF,PCUPOS,PASIGNATURA ,PAULA,PDOCENTE, 1, NULL ,LU , MA , MI , JU, VI ,SA,DO,pduracion,va�o,vperiodo,NULL);
+    
+    COMMIT;
+    CONFIRMACION:='SECCION CREADA CORRECTAMENTE';
+ELSE
+    CONFIRMACION:=NULL;
+
+END IF;
+
+exception
+    
+ when others then
+
+      CONFIRMACION:=NULL;
+
+    ROLLBACK;
+
+end;
+else
+
+vnomseccion:=TO_CHAR(EXTRACT(HOUR FROM NHORAI));  
+ 
+    INSERT INTO SECCION VALUES (SQ_SECCIONES.NEXTVAL,VNOMSECCION,NHORAI, NHORAF,PCUPOS,PASIGNATURA ,PAULA,PDOCENTE, 1, NULL ,LU , MA , MI , JU, VI ,SA,DO,pduracion,va�o,vperiodo,NULL);
+    
+    COMMIT;
+    CONFIRMACION:='SECCION CREADA CORRECTAMENTE';
+    
+
+end if;
+
+    
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure DEPARTAMENTO_COORDINADOR
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."DEPARTAMENTO_COORDINADOR" (c_DEPARTAMENTO OUT SYS_REFCURSOR, p_N_EMPLEADO VARCHAR2)IS 
+BEGIN 
+
+    OPEN c_DEPARTAMENTO FOR SELECT DEPTO.NOMBRE FROM DEPTO 
+    INNER JOIN DEPTO_CENTRO ON DEPTO.ID = depto_centro.depto_id
+     INNER JOIN DOCENTE ON docente.dept_centro_iD = DEPTO_CENTRO.ID
+    WHERE docente.n_empleado = p_N_EMPLEADO;
+
+END;    
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure DEPTOS_CENTRO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."DEPTOS_CENTRO" (DEPTOS OUT SYS_REFCURSOR,rcentro_ID varchar2)IS
+BEGIN
+
+OPEN DEPTOS for  select DEPTO.id, DEPTO.NOMBRE  FROM
+    DEPTO
+INNER JOIN
+    DEPTO_CENTRO ON DEPTO_CENTRO.DEPTO_ID = DEPTO.ID
+    WHERE depto_centro.centro_id = rcentro_ID;
+
+
+    EXCEPTION
+     WHEN OTHERS THEN
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure DESCRIPCION_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."DESCRIPCION_ESTUDIANTE" (CONFIRMACION OUT VARCHAR2, p_N_CUENTA VARCHAR2, p_DESCRIPCION VARCHAR2)IS
+BEGIN
+
+UPDATE ESTUDIANTE
+SET DESCRIPCION = p_DESCRIPCION
+WHERE n_cuenta = p_N_CUENTA;
+commit;
+CONFIRMACION:='DESCRIPCION AGREGADA CORRECTAMENTE';
+
+
+    EXCEPTION
+  WHEN OTHERS THEN 
+    CONFIRMACION:=NULL;
+    DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure ENVIAR_CONTRA
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."ENVIAR_CONTRA" ( MENSAJE OUT VARCHAR2,p_N_CUENTA VARCHAR2,p_CONTRASE�A	VARCHAR2)IS
+contador1 number;
+contador2 number;
+BEGIN 
+
+select count(*) into contador1 from estudiante where N_CUENTA=p_N_CUENTA;
+select count(*) into contador2 from docente where N_EMPLEADO=p_N_CUENTA;
+
+if contador1!=0 then
+
+    UPDATE ESTUDIANTE SET contrase�a = p_CONTRASE�A WHERE n_cuenta = p_N_CUENTA;
+    MENSAJE:= 'CONTRASE�A RESTABLECIDA CORRECTAMENTE';
+
+    COMMIT;
+end if;
+
+if contador2!=0 then
+
+    UPDATE DOCENTE SET contrase�a = p_CONTRASE�A WHERE n_empleado = p_N_CUENTA;
+    MENSAJE:= 'CONTRASE�A RESTABLECIDA CORRECTAMENTE';
+
+    COMMIT;
+end if;
+
+    EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+
+    MENSAJE:= NULL;
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure ESTUDIANTES_SECCION
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."ESTUDIANTES_SECCION" (C_ESTUDIANTES OUT SYS_REFCURSOR, p_SECCION VARCHAR2)IS
+fechaActual date;
+
+
+BEGIN
+ 
+select SYSDATE into fechaActual from dual;
+
+OPEN C_ESTUDIANTES FOR SELECT ESTUDIANTE.N_CUENTA, (PERSONA.PRIMERNOMBRE ||' ' || PERSONA.SEGUNDONOMBRE||' ' ||PERSONA.PRIMERAPELLIDO||' ' ||PERSONA.SEGUNDOAPELLIDO) AS NOMBRE_COMPLETO, PERSONA.CORREOELECTRONICO, matricula.calificacion  FROM ESTUDIANTE 
+INNER JOIN PERSONA ON estudiante.persona_dni = PERSONA.DNI 
+INNER JOIN MATRICULA ON matricula.estudiante_n_cuenta =  estudiante.N_CUENTA
+INNER JOIN SECCION ON MATRICULA.SECCION_ID=SECCION.ID
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (fechaActual BETWEEN FEC_NOTA_INI AND FEC_NOTA_FIN) and matricula.seccion_id = p_SECCION;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure EVALUACION_DOCENTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."EVALUACION_DOCENTE" (
+MENSAJE OUT VARCHAR2,
+
+p_FK_SECCION_ID	VARCHAR2,
+p_N_CUENTA	VARCHAR2,
+p_OBSERVACIONES	VARCHAR2,
+p_AREA_PERSONAL number,
+p_AREA_PROFESIONAL number,
+p_AREA_ACADEMICA number)IS 
+BEGIN 
+
+    update EVALUACION set 
+    OBSERVACIONES=p_OBSERVACIONES,
+    EVALUADA = 1,
+    AREA_PERSONAL=p_AREA_PERSONAL,
+    AREA_PROFESIONAL =  p_AREA_PROFESIONAL,
+    AREA_ACADEMICA = p_AREA_ACADEMICA
+    where FK_SECCION_ID = p_FK_SECCION_ID and N_CUENTA=p_N_CUENTA;
+
+    COMMIT;
+    MENSAJE:= 'DOCENTE EVALUADO CON EXITO';
+
+    EXCEPTION
+
+    WHEN OTHERS THEN 
+    MENSAJE:= NULL;
+    ROLLBACK;
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure HISTORIAL_ACADEMICO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."HISTORIAL_ACADEMICO" (c_HISTORIAL OUT SYS_REFCURSOR, v_CUENTA VARCHAR2)IS
+BEGIN 
+
+OPEN c_HISTORIAL FOR SELECT PERSONA.PRIMERNOMBRE ||' '||PERSONA.SEGUNDONOMBRE|| ' ' || PERSONA.PRIMERAPELLIDO || ' ' || PERSONA.SEGUNDOAPELLIDO AS NOMBRE_ALUMNO,ESTUDIANTE.N_CUENTA,ASIGNATURA.NOMBRE AS NOMBRE_ASIGNATURA, matricula.calificacion,
+ASIGNATURA.COD,ASIGNATURA.UV,seccion.periodo_id,seccion.a�o_id
+FROM MATRICULA 
+INNER JOIN SECCION ON matricula.seccion_id = SECCION.ID
+INNER JOIN ASIGNATURA ON seccion.asignatura_cod =  asignatura.cod
+INNER JOIN ESTUDIANTE ON MATRICULA.ESTUDIANTE_N_CUENTA = ESTUDIANTE.N_CUENTA
+INNER JOIN PERSONA ON ESTUDIANTE.PERSONA_DNI = PERSONA.DNI
+WHERE estudiante.n_cuenta = v_CUENTA and matricula.estado_mat_id='4' and seccion.estado!=0;
+ 
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure INGRESAR_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."INGRESAR_ESTUDIANTE" (MENSAJE OUT VARCHAR2,p_PERSONA_DNI	VARCHAR2,
+p_prioridad	varchar2, p_CONTRASE�A VARCHAR2)IS
+p_CAR_DISPONIBLE_ID varchar2(10);
+p_correo varchar2(60);
+p_cuenta varchar2(20);
+BEGIN   
+     
+     
+     select car_disponible_id,persona.correoelectronico INTO P_CAR_DISPONIBLE_ID,p_Correo from aspirante inner join persona on persona.dni=aspirante.persona_dni where prioridad=p_prioridad and persona_dni=p_PERSONA_DNI;
+  
+
+p_cuenta:=TO_CHAR(ADD_MONTHS(SYSDATE, 12), 'YYYY')||ESTUDIANTES.NEXTVAl;
+
+    INSERT INTO ESTUDIANTE (N_CUENTA,PERSONA_DNI,CAR_DISPONIBLE_ID, CONTRASE�A ) 
+    VALUES(p_cuenta, p_PERSONA_DNI	,p_CAR_DISPONIBLE_ID, p_CONTRASE�A);
+    
+    
+UPDATE aspirante
+SET evaluado=1
+WHERE evaluado=0;
+
+    MENSAJE:= p_CUENTA || ' ' || p_correo;
+    COMMIT;
+
+    EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        -- Maneja la excepci�n de clave primaria duplicada
+    MENSAJE:='UNAH1';
+     WHEN OTHERS THEN
+         MENSAJE := null;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+        ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure INGRESAR_NOTA
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."INGRESAR_NOTA" (MENSAJE OUT VARCHAR2, p_NOTA NUMBER, p_N_CUENTA  VARCHAR2, p_SECCION VARCHAR2)IS
+
+BEGIN
+    IF ((P_NOTA>=0) AND (P_NOTA<=100)) THEN
+    UPDATE  MATRICULA  SET CALIFICACION  = p_NOTA WHERE ESTUDIANTE_N_CUENTA =  p_N_CUENTA AND SECCION_ID = p_SECCION;
+
+    COMMIT;
+    MENSAJE:= 'NOTA INGRESADA CORRECTAMENTE';
+    END IF;
+    EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    MENSAJE:= NULL;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure INGRESAR_NOTA_ASPIRANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."INGRESAR_NOTA_ASPIRANTE" (Rconfirm out varchar2,RDNI VARCHAR2,RPUNTUACION NUMBER,TIPO number)
+is 
+vpuntuacion number;
+pcorreo varchar2(100);
+begin
+
+
+
+select count(*) into vpuntuacion from examen_admision where aspirante_persona_dni=Rdni and tipo_exam_id=tipo and puntuacion is null;
+select  correoelectronico into pcorreo from persona where dni=rdni;
+
+
+if (vpuntuacion=1 and rpuntuacion is not null) then
+UPDATE examen_admision
+SET puntuacion=rpuntuacion
+WHERE aspirante_persona_dni=rdni and tipo_exam_id=tipo;
+rconfirm:=rdni || ' ' || pcorreo;
+commit;
+else
+rconfirm:='UNAH22';
+end if;
+
+
+EXCEPTION
+   WHEN NO_DATA_FOUND THEN
+   rconfirm:='UNAH22';
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    rconfirm:= sqlerrm;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure INGRESAR_PERIODO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."INGRESAR_PERIODO" (
+ MENSAJE OUT VARCHAR2,
+    p_FEC_NOTA_INI VARCHAR2,
+    p_FEC_NOTA_FIN VARCHAR2,
+    p_PERIODO_PERIODO NUMBER,
+    p_PERIODO_A�O VARCHAR2,
+    p_PERIODO_DURACION_ID VARCHAR2,
+    p_FEC_INI_PLAN	VARCHAR2,
+    p_FEC_FINAL_PLAN	VARCHAR2,
+    p_FEC_CAN_EXP_INI	VARCHAR2,
+    p_FEC_CAN_EXP_FIN	VARCHAR2,
+    p_FEC_PERIODO_INI	VARCHAR2,
+    p_FEC_PERIODO_FIN	VARCHAR2
+) AS
+BEGIN
+
+
+    INSERT INTO PERIODO (PERIODO, A�O, ACTIVO, DURACION_ID)
+    VALUES (p_PERIODO_PERIODO, p_PERIODO_A�O, '1', p_PERIODO_DURACION_ID);
+
+    INSERT INTO CONFIG_PERIOD (FEC_INI_PLAN, FEC_FINAL_PLAN, FEC_NOTA_INI, FEC_NOTA_FIN, PERIODO_PERIODO, PERIODO_A�O, PERIODO_DURACION_ID,
+                               FEC_CAN_EXP_INI, FEC_CAN_EXP_FIN, FEC_PERIODO_INI, FEC_PERIODO_FIN)
+    VALUES (TO_DATE(p_FEC_INI_PLAN, 'MM/DD/YYYY'), TO_DATE(p_FEC_FINAL_PLAN, 'MM/DD/YYYY'), TO_DATE(p_FEC_NOTA_INI, 'MM/DD/YYYY'), TO_DATE(p_FEC_NOTA_FIN, 'MM/DD/YYYY'),
+            p_PERIODO_PERIODO, p_PERIODO_A�O, p_PERIODO_DURACION_ID,
+            TO_DATE(p_FEC_CAN_EXP_INI, 'MM/DD/YYYY'), TO_DATE(p_FEC_CAN_EXP_FIN, 'MM/DD/YYYY'), TO_DATE(p_FEC_PERIODO_INI, 'MM/DD/YYYY'), TO_DATE(p_FEC_PERIODO_FIN, 'MM/DD/YYYY'));
+    MENSAJE := 'Periodo ingresado correctamente';
+
+
+    COMMIT;
+EXCEPTION
+   WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE(p_FEC_INI_PLAN);
+     DBMS_OUTPUT.PUT_LINE(p_FEC_PERIODO_FIN);
+         MENSAJE := sqlerrm;
+
+        ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure INICIO_JEFEDEPARTAMENTO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."INICIO_JEFEDEPARTAMENTO" (RResultado out sys_refcursor, N_CUENTA VARCHAR2)
+is
+begin
+    OPEN RRESULTADO FOR select primernombre || ' ' || PRIMERAPELLIDO as nombre ,facultad.nom_facultad as facultad , centro.nombre as centro,DEPTO.nombre as carrera from docente 
+inner join DEPTO_CENTRO ON DEPT_CENTRO_id = DEPTO_CENTRO.id 
+inner join DEPTO on DEPTO.id = DEPTO_id
+    inner join persona on persona.dni=persona_dni
+    inner join centro on centro_id=centro.id
+    inner join carreras_depto on carreras_depto.depto_id = depto_centro.depto_id
+    inner join carrera on carrera.id =  carreras_depto.carrera_id
+    inner join facultad on facultad.id = carrera.facultad_id
+     where docente.n_empleado=N_CUENTA;
+     
+     --inner join facultad on facultad.id=facultad_id
+     -- Falta agregarlo
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure INSERTAR_EN_CONF_MATRICULA
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."INSERTAR_EN_CONF_MATRICULA" (
+    MENSAJE out VARCHAR2,
+    p_INDICE_INICIO NUMBER,
+    p_INDICE_FINAL NUMBER,
+    p_FECHA_INICIO VARCHAR2,
+    p_FECHA_FINAL VARCHAR2,
+    p_NOMBRE VARCHAR2,
+    p_PERIODO_PERIODO NUMBER,
+    p_PERIODO_A�O VARCHAR2,
+    p_PERIODO_DURACION_ID VARCHAR2
+) AS
+BEGIN
+
+    INSERT INTO CONF_MATRICULA (INDICE_INICIO, INDICE_FINAL, FECHA_INICIO, FECHA_FINAL, NOMBRE, PERIODO_PERIODO, PERIODO_A�O, PERIODO_DURACION_ID)
+    VALUES (p_INDICE_INICIO, p_INDICE_FINAL, TO_TIMESTAMP(p_FECHA_INICIO, 'MM/DD/YYYY HH24:MI:SS'), TO_TIMESTAMP(p_FECHA_FINAL, 'MM/DD/YYYY HH24:MI:SS'), p_NOMBRE, p_PERIODO_PERIODO, p_PERIODO_A�O, p_PERIODO_DURACION_ID);
+    MENSAJE:='INGRESADO CORRECTAMENTE';
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        MENSAJE:=NULL;
+        DBMS_OUTPUT.PUT_LINE('Error al insertar en CONF_MATRICULA: ' || SQLERRM);
+        ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure LOGIN_SP
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."LOGIN_SP" (RROL OUT VARCHAR2, RUSUARIO VARCHAR2) IS
+
+BEGIN  
+    DECLARE
+    CONTADOR1 NUMBER;
+    CONTADOR2 NUMBER; 
+    Contra varchar2(200);
+    VROL VARCHAR2(30);
+    begin
+
+   SELECT COUNT(*) INTO CONTADOR1
+   FROM ADMIN
+   WHERE Usuario = RUSUARIO;
+
+   SELECT COUNT(*) INTO CONTADOR2
+   FROM ESTUDIANTE
+   WHERE n_cuenta = RUSUARIO;
+ 
+    IF CONTADOR1 = 1 THEN
+        SELECT contrase�a INTO Contra
+        FROM ADMIN
+        WHERe Usuario = RUSUARIO;
+        RROL := 'administrador ' || Contra;
+
+    ELSIF CONTADOR2 = 1 THEN
+        SELECT contrase�a INTO Contra
+        FROM ESTUDIANTE
+        WHERE n_cuenta = RUSUARIO;
+        RROL := 'estudiante '||contra;  
+
+    ELSE
+
+        SELECT r.rol, d.CONTRASE�A  INTO VROL, Contra
+        FROM docente d
+        INNER JOIN rol r ON d.rol_id = r.id
+        WHERE d.N_Empleado = RUSUARIO;
+        RROL:= VROL || ' ' || Contra;
+
+    END IF;
+
+    EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RROL := null; -- Puedes asignar un valor por defecto o manejar la excepci�n de alguna otra manera
+    WHEN OTHERS THEN
+        -- Aqu� puedes manejar otras excepciones si es necesario
+        RROL := null;
+    end;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENERAULAS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENERAULAS" (RRESULTADO out SYS_REFCURSOR, RN_empleado varchar2,Redificio_ID VARCHAR2)
+IS
+RCarrera varchar(10);
+BEGIN
+select  DEPT_CENTRO_ID  into Rcarrera from docente where n_empleado=RN_empleado ;
+open rresultado for select AULA.ID,AULA.NOMBRE from edificio inner join aula on aula.edificio_id=edificio.id inner join aula_asig on aula_asig.aula_id=aula.id
+where  DEPT_CENTRO_ID=Rcarrera
+and edificio.id=Redificio_ID;
+
+
+ 
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENERCORREO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENERCORREO" (RESULTADO out SYS_REFCURSOR,RDNI VARCHAR2)
+IS
+CONTADOR1 NUMBER;
+CONTADOR2 NUMBER;
+BEGIN
+
+SELECT COUNT(*) INTO CONTADOR1 FROM PERSONA
+INNER JOIN DOCENTE ON PERSONA.DNI=PERSONA_DNI
+where persona.dni=rdni;
+
+
+SELECT COUNT(*) INTO CONTADOR2 FROM PERSONA
+INNER JOIN ESTUDIANTE ON PERSONA.DNI=PERSONA_DNI
+where persona.dni=rdni;
+
+IF(CONTADOR1!=0) then
+OPEN  RESULTADO FOR SELECT N_EMPLEADO, PERSONA.PRIMERNOMBRE ||' ' ||PERSONA.PRIMERAPELLIDO AS NOMBRE, CORREOELECTRONICO FROM PERSONA
+INNER JOIN DOCENTE ON PERSONA.DNI=PERSONA_DNI
+where persona.dni=rdni;
+
+
+end if;
+
+IF(CONTADOR2!=0) then
+OPEN RESULTADO FOR SELECT N_CUENTA, PERSONA.PRIMERNOMBRE ||' ' ||PERSONA.PRIMERAPELLIDO AS NOMBRE, CORREOELECTRONICO FROM PERSONA
+INNER JOIN ESTUDIANTE ON PERSONA.DNI=PERSONA_DNI
+where persona.dni=rdni;
+end if;
+
+END;
+
+
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENEREDIFICIOS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENEREDIFICIOS" (RRESULTADO out SYS_REFCURSOR, RN_empleado varchar2)
+is 
+RCarrera varchar(10);
+begin
+
+select dept_centro_id into Rcarrera from docente where n_empleado=RN_empleado;
+
+open rresultado for select distinct edificio.id,edificio.nombre from edificio inner join aula on aula.edificio_id=edificio.id inner join aula_asig on aula_asig.aula_id=aula.id where dept_centro_id=RCarrera;
+
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENERESTADISTICAS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENERESTADISTICAS" (resultado out  sys_refcursor,NJEFE VARCHAR2)
+
+is
+V1 NUMBER;
+V2 NUMBER;
+V3 NUMBER;
+V4 VARCHAR2(200);
+V5 VARCHAR2(20);
+fechaActual date;
+p_carrera_jefe varchar2(10);
+begin
+ 
+select SYSDATE INTO fechaActual FROM DUAL;
+
+ SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente
+  WHERE n_empleado = NJEFE;
+
+open resultado for select docente.n_empleado AS CUENTA, PERSONA.PRIMERNOMBRE ||' '||PERSONA.PRIMERAPELLIDO AS NOMBRE ,AVG(AREA_PERSONAL)*20,AVG(AREA_PROFESIONAL)*20,AVG(AREA_ACADEMICA)*20
+from evaluacion 
+INNER JOIN SECCION ON FK_SECCION_ID=SECCION.ID
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+INNER JOIN DOCENTE ON SECCION.DOCENTE_N_EMPLEADO=DOCENTE.N_EMPLEADO  
+INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI=PERSONA.DNI
+INNER JOIN DEPTO_CENTRO ON DEPTO_CENTRO.ID=DOCENTE.DEPT_CENTRO_ID
+WHERE (fechaActual BETWEEN FEC_NOTA_INI AND FEC_NOTA_FIN) AND DEPT_CENTRO_ID=p_carrera_jefe 
+GROUP BY docente.n_empleado,PERSONA.PRIMERNOMBRE,PERSONA.PRIMERAPELLIDO ORDER BY CUENTA,NOMBRE ; 
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENERESTADISTICAS2
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENERESTADISTICAS2" (resultado out  sys_refcursor,NJEFE VARCHAR2)
+
+is
+V1 NUMBER;
+V2 NUMBER;
+V3 NUMBER;
+V4 VARCHAR2(200);
+V5 VARCHAR2(20);
+fechaActual date;
+p_carrera_jefe varchar2(10);
+begin
+
+select SYSDATE INTO fechaActual FROM DUAL;
+
+ SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente
+  WHERE n_empleado = NJEFE;
+
+open resultado for select docente.n_empleado AS CUENTA, PERSONA.PRIMERNOMBRE ||' '||PERSONA.PRIMERAPELLIDO AS NOMBRE ,COUNT(*), PERIODO.PERIODO, PERIODO.A�O
+from MATRICULA
+INNER JOIN SECCION ON MATRICULA.SECCION_ID=SECCION.ID
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+INNER JOIN DOCENTE ON SECCION.DOCENTE_N_EMPLEADO=DOCENTE.N_EMPLEADO  
+INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI=PERSONA.DNI
+INNER JOIN DEPTO_CENTRO ON DEPTO_CENTRO.ID=DOCENTE.DEPT_CENTRO_ID
+WHERE DEPT_CENTRO_ID=p_carrera_jefe AND matricula.estado_mat_id = '4'
+GROUP BY docente.n_empleado,PERSONA.PRIMERNOMBRE,PERSONA.PRIMERAPELLIDO,PERIODO.PERIODO,
+                       PERIODO.DURACION_ID,
+                       PERIODO.A�O  ORDER BY CUENTA,NOMBRE  ; 
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENEREVALUACIONDOCENTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENEREVALUACIONDOCENTE" (resultado out  sys_refcursor,pseccionID varchar2)
+
+is
+V1 NUMBER;
+V2 NUMBER;
+V3 NUMBER;
+V4 VARCHAR2(200);
+fechaActual date;
+begin
+
+select SYSDATE INTO fechaActual FROM DUAL;
+ 
+OPEN RESULTADO FOR select AREA_PERSONAL,AREA_PROFESIONAL,AREA_ACADEMICA, OBSERVACIONES INTO V1,V2,V3,V4 from evaluacion 
+INNER JOIN SECCION ON FK_SECCION_ID=SECCION.ID
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (fechaActual BETWEEN FEC_NOTA_INI AND FEC_NOTA_FIN) AND FK_SECCION_ID=pseccionID; 
+
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_ASIGNATURAS_A_MATRICULAR
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_ASIGNATURAS_A_MATRICULAR" (RESULTADO OUT SYS_REFCURSOR, pN_CUENTA VARCHAR2, pN_DEPTO VARCHAR2)
+IS
+  vDURACION VARCHAR2(10);
+  vCARRERA VARCHAR2(10);
+  vPERIODO VARCHAR2(50);
+  vA�O VARCHAR2(10);
+
+BEGIN
+
+  OPEN RESULTADO FOR
+  SELECT DISTINCT s.nombre, s.cod
+    FROM ASIGNATURA S 
+    INNER JOIN DEPTO ON depto.id = s.depto_id
+    WHERE depto.id = pN_DEPTO and s.nombre != 'NULL';
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CAMBIO_CAR
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CAMBIO_CAR" (c_SOLICITUDES OUT SYS_REFCURSOR, p_N_EMPLEADO VARCHAR2)IS
+
+ p_carrera_jefe  VARCHAR2(10);
+BEGIN 
+
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente 
+  WHERE n_empleado = p_N_EMPLEADO;
+
+OPEN c_SOLICITUDES FOR SELECT s_cambio_car.ID,PERSONA.PRIMERNOMBRE || ' ' || PERSONA.PRIMERAPELLIDO AS NOMBRE,s_cambio_car.ESTUDIANTE_N_CUENTA,CARRERA.NOM_CARRERA AS NUEVA_CARRERA, s_cambio_car.fecha_solicitud,s_cambio_car.estado,s_cambio_car.justificacion   
+FROM s_cambio_car 
+INNER JOIN CAR_DISPONIBLE ON s_cambio_car.car_disponible_id = CAR_DISPONIBLE.ID
+INNER JOIN CARRERA ON CARRERA.ID = car_disponible.carrera_iD 
+INNER JOIN ESTUDIANTE ON ESTUDIANTE.N_CUENTA = s_cambio_car.ESTUDIANTE_N_CUENTA
+INNER JOIN PERSONA ON PERSONA.DNI  = ESTUDIANTE.PERSONA_DNI
+INNER JOIN CARRERAS_DEPTO ON s_cambio_car.CAR_DISPONIBLE_ID = CARRERAS_DEPTO.CARRERA_ID
+WHERE carreras_depto.depto_id = p_carrera_jefe;
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CAMBIO_CENTRO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CAMBIO_CENTRO" (c_SOLICITUDES OUT SYS_REFCURSOR, p_N_EMPLEADO VARCHAR2)IS
+
+ p_carrera_jefe  VARCHAR2(10);
+BEGIN 
+
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente 
+  WHERE n_empleado = p_N_EMPLEADO;
+
+OPEN c_SOLICITUDES FOR select distinct s_cambio_centro.id, persona.primernombre || ' ' || persona.primerapellido as Nombre, s_cambio_centro.estudiante_n_cuenta, centro.nombre AS NUEVO_CENTRO, s_cambio_centro.fecha_solicitud,
+JUSTIFICACION,ESTADO
+from s_cambio_centro
+inner join estudiante on estudiante.n_cuenta= s_cambio_centro.estudiante_n_cuenta
+inner join persona on persona.dni = estudiante.persona_dni
+inner join centro on s_cambio_centro.centro_id= centro.id
+INNER JOIN DEPTO_CENTRO ON DEPTO_CENTRO.CENTRO_ID=CENTRO.ID
+WHERE depto_CENTRO.depto_id = p_carrera_jefe;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CANCELACION_EXC
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CANCELACION_EXC" (c_SOLICITUDES OUT SYS_REFCURSOR, p_N_EMPLEADO VARCHAR2)IS
+p_carrera_jefe  VARCHAR2(10);
+BEGIN
+
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente 
+  WHERE n_empleado = p_N_EMPLEADO;
+
+OPEN c_SOLICITUDES FOR SELECT S_CANCEL_EXC.id, persona.primernombre || ' ' || persona.primerapellido as Nombre, S_CANCEL_EXC.estudiante_n_cuenta, S_CANCEL_EXC.fecha_solicitud,SECCION.NOMBRE,ASIGNATURA.NOMBRE,S_CANCEL_EXC.JUSTIFICACION,S_CANCEL_EXC.ESTADO,s_cancel_exc.documento 
+FROM S_CANCEL_EXC
+INNER JOIN ESTUDIANTE ON s_cancel_exc.estudiante_n_cuenta = ESTUDIANTE.N_CUENTA
+INNER JOIN PERSONA ON estudiante.persona_dni = PERSONA.DNI
+INNER JOIN CAR_DISPONIBLE ON estudiante.car_disponible_id = CAR_DISPONIBLE.ID
+INNER JOIN CARRERA ON car_disponible.carrera_id = carrera.id
+INNER JOIN CARRERAS_DEPTO ON carrera.id = carreras_depto.carrera_id
+INNER JOIN DEPTO ON carreras_depto.depto_id = depto.id
+INNER JOIN CANCELACIONES_SECCION_EXC ON cancelaciones_seccion_exc.id_s_can_exc = s_cancel_exc.id
+INNER JOIN SECCION ON cancelaciones_seccion_exc.id_seccion = SECCION.ID
+INNER JOIN ASIGNATURA ON SECCION.ASIGNATURA_COD = ASIGNATURA.COD
+where depto.id = p_carrera_jefe;
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CENTROS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CENTROS" (Resultado Out SYS_REFCURSOR)
+iS
+BEGIN
+  OPEN resultado FOR 
+SELECT ID, ACRONIMO || ', '|| NOMBRE AS CENTROS FROM CENTRO;
+
+
+
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CLASES_A_MATRICULAR
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CLASES_A_MATRICULAR" (RESULTADO OUT SYS_REFCURSOR, pN_CUENTA VARCHAR2)
+IS
+  vDURACION VARCHAR2(10);
+  vCARRERA VARCHAR2(10);
+    vCentro VARCHAR2(10);
+  vPERIODO VARCHAR2(50);
+  vA�O VARCHAR2(10);
+ 
+BEGIN
+  -- Obtener Duracion del periodo
+  SELECT DURACION_ID, CARRERA.ID,car_disponible.centro_id INTO vDURACION, vCARRERA,vcentro FROM car_disponible
+  INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID = CARRERA.ID
+  INNER JOIN ESTUDIANTE ON ESTUDIANTE.CAR_DISPONIBLE_ID = CAR_DISPONIBLE.ID
+  WHERE ESTUDIANTE.N_CUENTA = pN_CUENTA;
+
+  -- Obtener periodo
+  SELECT PERIODO.PERIODO, PERIODO.A�O INTO vPERIODO, vA�O FROM periodo 
+  INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                         AND PERIODO.A�O = PERIODO_A�O
+                         AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+  WHERE (SYSDATE BETWEEN FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND PERIODO.DURACION_ID = vDURACION;
+
+  OPEN RESULTADO FOR
+    SELECT seccion.id, seccion.nombre, s.nombre, r.nombre, s.cod, r.cod,
+           SUBSTR(TO_CHAR(seccion.horaincio, 'HH:MI'), 5, 5) AS hora_inicio, SUBSTR(TO_CHAR(seccion.horafinal, 'HH:MI'), 5, 5) AS hora_final,
+           persona.primernombre || ' ' || persona.primerapellido as docente,
+           lunes, martes, miercoles, jueves, viernes, sabado, domingo
+    FROM seccion
+    LEFT JOIN MATRICULA ON SECCION.ID = MATRICULA.SECCION_ID
+    INNER JOIN ASIGNATURA S ON SECCION.ASIGNATURA_COD = S.COD
+    INNER JOIN REQUISITOS ON REQUISITOS.ID_ASIGNATURA = S.COD
+    INNER JOIN ASIGNATURA R ON R.COD = ID_REQUISITO
+    LEFT JOIN PENSUM P ON S.COD = P.ASIGNATURA_COD
+    LEFT JOIN CARRERA ON CARRERA.ID = P.CARRERA_ID
+    INNER JOIN DOCENTE ON seccion.Docente_n_empleado = docente.n_empleado
+    INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI = PERSONA.DNI
+    INNER JOIN DEPTO_CENTRO ON DOCENTE.DEPT_CENTRO_ID = DEPTO_CENTRO.ID
+    WHERE SECCION.periodo_id = vPERIODO AND SECCION.a�o_id = vA�O AND SECCION.duracion_id = vDURACION AND seccion.estado != 0 AND CARRERA.ID = VCARRERA
+    AND  DEPTO_CENTRO.CENTRO_ID=VCENTRO;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CLASES_A_MATRICULAR2
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CLASES_A_MATRICULAR2" (RESULTADO OUT SYS_REFCURSOR, pN_CUENTA VARCHAR2, p_COD_ASIGNATURA VARCHAR2)
+IS
+  vDURACION VARCHAR2(10);
+  vCARRERA VARCHAR2(10);
+  vPERIODO VARCHAR2(50);
+  VCENTRO VARCHAR2(20);
+  vA�O VARCHAR2(10);
+
+BEGIN
+  -- Obtener Duracion del periodo
+  SELECT DURACION_ID, CARRERA.ID,car_disponible.centro_id INTO vDURACION, vCARRERA,vcentro FROM car_disponible
+  INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID = CARRERA.ID
+  INNER JOIN ESTUDIANTE ON ESTUDIANTE.CAR_DISPONIBLE_ID = CAR_DISPONIBLE.ID
+  WHERE ESTUDIANTE.N_CUENTA = pN_CUENTA;
+
+  -- Obtener periodo
+  SELECT PERIODO.PERIODO, PERIODO.A�O INTO vPERIODO, vA�O FROM periodo 
+  INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                         AND PERIODO.A�O = PERIODO_A�O
+                         AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+  WHERE (SYSDATE BETWEEN FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND PERIODO.DURACION_ID = vDURACION;
+
+  OPEN RESULTADO FOR
+    SELECT distinct seccion.id, seccion.nombre, s.nombre, r.nombre, s.cod, r.cod,
+           SUBSTR(TO_CHAR(seccion.horaincio, 'HH:MI'), 5, 5) AS hora_inicio, SUBSTR(TO_CHAR(seccion.horafinal, 'HH:MI'), 5, 5) AS hora_final,
+           persona.primernombre || ' ' || persona.primerapellido as docente,
+           lunes, martes, miercoles, jueves, viernes, sabado, domingo
+    FROM seccion
+    LEFT JOIN MATRICULA ON SECCION.ID = MATRICULA.SECCION_ID
+    INNER JOIN ASIGNATURA S ON SECCION.ASIGNATURA_COD = S.COD
+    INNER JOIN REQUISITOS ON REQUISITOS.ID_ASIGNATURA = S.COD
+    INNER JOIN ASIGNATURA R ON R.COD = ID_REQUISITO
+    LEFT JOIN PENSUM P ON S.COD = P.ASIGNATURA_COD
+    LEFT JOIN CARRERA ON CARRERA.ID = P.CARRERA_ID
+    INNER JOIN DOCENTE ON seccion.Docente_n_empleado = docente.n_empleado
+    INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI = PERSONA.DNI
+     INNER JOIN DEPTO_CENTRO ON DOCENTE.DEPT_CENTRO_ID = DEPTO_CENTRO.ID
+    WHERE SECCION.periodo_id = vPERIODO AND SECCION.a�o_id = vA�O AND SECCION.duracion_id = vDURACION AND seccion.estado != 0 AND CARRERA.ID = VCARRERA AND s.cod = p_COD_ASIGNATURA
+    AND  DEPTO_CENTRO.CENTRO_ID=VCENTRO;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CLASES_CURSADAS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CLASES_CURSADAS" (RESULTADO OUT SYS_REFCURSOR, pN_CUENTA VARCHAR2)
+IS
+  vCARRERA VARCHAR2(10);
+  
+BEGIN
+  -- Obtener Duracion del periodo
+  SELECT  CARRERA.ID INTO vCARRERA FROM car_disponible
+  INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID = CARRERA.ID
+  INNER JOIN ESTUDIANTE ON ESTUDIANTE.CAR_DISPONIBLE_ID = CAR_DISPONIBLE.ID
+  WHERE ESTUDIANTE.N_CUENTA = pN_CUENTA;
+
+OPEN RESULTADO FOR
+SELECT distinct S.COD
+    FROM seccion
+    LEFT JOIN MATRICULA ON SECCION.ID = MATRICULA.SECCION_ID
+    INNER JOIN ASIGNATURA S ON SECCION.ASIGNATURA_COD = S.COD
+    INNER JOIN REQUISITOS ON REQUISITOS.ID_ASIGNATURA = S.COD
+    INNER JOIN ASIGNATURA R ON R.COD = ID_REQUISITO
+    INNER JOIN PENSUM P ON S.COD = P.ASIGNATURA_COD
+    LEFT JOIN CARRERA ON CARRERA.ID = P.CARRERA_ID
+    INNER JOIN DOCENTE ON seccion.Docente_n_empleado = docente.n_empleado
+    INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI = PERSONA.DNI
+    WHERE CARRERA.ID = vCARRERA AND matricula.estado_mat_id='4' and matricula.ESTUDIANTE_N_Cuenta=pN_CUENTA and matricula.calificacion >= 65;
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CLASES_MATRICULADAS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CLASES_MATRICULADAS" (RESULTADO OUT SYS_REFCURSOR, pN_CUENTA VARCHAR2)
+IS
+ 
+vDURACION VARCHAR2(10);
+vN_CUENTA VARChAR2(20);
+vPERSONA VARCHAR2(200);
+vPERIODO VARCHAR2(50);
+vA�O VARCHAR2(10);
+
+
+BEGIN
+--Obtener Duracion del periodo
+
+select DURACION_ID into vDURACION from car_disponible
+INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID=CARRERA.ID
+INNER JOIN ESTUDIANTE ON ESTUDIANTE.CAR_DISPONIBLE_ID=CAR_DISPONIBLE.ID
+WHERE ESTUDIANTE.N_CUENTA=pN_CUENTA;
+
+--Obtener periodo
+select PERIODO.PERIODO, PERIODO.A�O INTO vPERIODO, vA�O from periodo 
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID 
+WHERE (SYSDATE BETWEEN FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND PERIODO.DURACION_ID=vDURACION;
+
+
+OPEN RESULTADO FOR select seccion.id,asignatura.cod,asignatura.nombre as asignatura,seccion.nombre as seccion,asignatura.uv,SUBSTR(TO_CHAR(seccion.horaincio, 'HH:MI'), 5, 5) AS hora_inicio,SUBSTR(TO_CHAR(seccion.horafinal, 'HH:MI'), 5, 5) AS hora_final,persona.primernombre || ' ' || persona.SEGUNDOnombre || ' ' ||persona.primerapellido || ' ' ||persona.segundoapellido AS docente
+,lunes,martes,miercoles,jueves,viernes,sabado,domingo,seccion.video from seccion
+INNER JOIN MATRICULA ON SECCION.ID=MATRICULA.SECCION_ID
+INNER JOIN ASIGNATURA ON SECCION.ASIGNATURA_COD=ASIGNATURA.COD
+INNER JOIN DOCENTE ON seccion.Docente_n_empleado=docente.n_empleado
+INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI=PERSONA.DNI
+where periodo_id=vPERIODO and a�o_id=vA�O and duracion_id=vDURACION and MATRICULA.ESTUDIANTE_N_CUENTA=pN_CUENTA and matricula.estado_mat_id='1' and seccion.estado!=0;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_CSV_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_CSV_ESTUDIANTE" (
+    RResultado OUT SYS_REFCURSOR    
+)
+IS
+ BEGIN
+
+
+OPEN RResultado FOR
+  select Persona_DNI,min(prioridad) from(
+select PERSONA_DNI,nota_apr,puntuacion,prioridad from aspirante inner join Examen_Admision on aspirante.persona_dni=aspirante_persona_dni 
+    inner join car_disponible on aspirante.car_disponible_id=car_disponible.id inner join carrera on carrera.id= car_disponible.carrera_id 
+    where tipo_exam_id='1' and puntuacion+1>nota_apr and aspirante.evaluado=0)
+    group by persona_DNI;
+
+
+
+commit;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+
+dbms_Output.put_line(sqlerrm);
+    ROLLBACK;
+
+
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_DATOS_ASPIRANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_DATOS_ASPIRANTE" (
+    RResultado OUT SYS_REFCURSOR,
+    RDNI VARCHAR2 
+   
+)
+IS
+    TYPE REGISTRO IS RECORD (
+        DNI VARCHAR2(15),
+        Centro VARCHAR2(100),
+        Nombre VARCHAR2(100),
+        Direccion VARCHAR2(100),
+        Correo VARCHAR2(200),
+        Telefono VARCHAR2(15),
+        PRIMERA_CARRERA VARCHAR2(80),
+        NOTA_APROBATORIA NUMBER,
+        SEGUNDA_CARRERA VARCHAR2(80),
+        NOTA_APROBATORIA2 NUMBER,
+        PAA VARCHAR2(10),
+        EXAMEN_EXTRA1 VARCHAR2(10),
+        EXAMEN_EXTRA2 VARCHAR2(10)
+    );
+
+    resultado REGISTRO;
+
+    cursor Carreras  is select carrera.Nom_carrera,carrera.nota_apr,aspirante.prioridad from carrera inner join car_disponible on car_disponible.carrera_id=carrera.id inner join aspirante
+    on aspirante.car_disponible_id=car_disponible.id  where aspirante.persona_dni=RDNI;
+
+    cursor extras is select tipo_exam.nombre from  examen_admision inner join tipo_exam on examen_admision.tipo_exam_id=tipo_exam.id inner join aspirante
+    on aspirante.persona_dni=examen_admision.aspirante_persona_dni where aspirante.persona_dni=RDNI group by  tipo_exam.nombre; 
+
+    vCarrera varchar2(80);
+    vNota number;
+    vExtra varchar2(10);
+    vPrioridad varchar2(5);
+    CONTADOR NUMBER;
+BEGIN
+
+
+    SELECT DISTINCT persona_DNI,
+                    acronimo || ', ' || nombre AS Centro_aplicacion,
+                    PrimerNombre || ' ' || Segundonombre || ' ' || pRIMERaPELLIDO || ' ' || sEGUNDOaPELLIDO AS nombre,
+                    DIRECCION,
+                    CORREOELECTRONICO,
+                    Telefono
+    INTO resultado.DNI,
+         resultado.Centro,
+         resultado.Nombre,
+         resultado.Direccion,
+         resultado.Correo,
+         resultado.Telefono
+    FROM aspirante
+    INNER JOIN persona ON persona.dni = aspirante.persona_dni
+    INNER JOIN centro ON centro.id = aspirante.centro_id
+    WHERE aspirante.persona_dni = RDNI;
+
+
+    open carreras;
+
+    LOOP
+    FETCH Carreras INTO vCarrera, vNota,vPrioridad;
+     EXIT WHEN Carreras%NOTFOUND;
+
+            if vPrioridad='1' then
+             resultado.PRIMERA_CARRERA:=vCarrera;
+                   resultado.NOTA_APROBATORIA:=vnota;
+            end if;
+            if vPrioridad='2' then
+
+            resultado.SEGUNDA_CARRERA:=vCarrera;
+                   resultado.NOTA_APROBATORIA2:=vnota;                   
+            end if;
+
+    -- Realiza las operaciones que desees con los valores obtenidos
+    -- Puedes usar las variables "variable_nombre_carrera" y "variable_nota_apr" aqu�
+
+    -- Sal del bucle cuando no haya m�s filas
+END LOOP;
+
+
+    CLOSE Carreras;
+
+
+    CONTADOR:=1;
+
+    open extras;
+
+    LOOP
+    FETCH extras INTO vextra;
+    EXIT WHEN EXTRAS%NOTFOUND;
+    dbms_output.put_line(vextra);
+            if contador=2 then
+             resultado.EXAMEN_EXTRA1:=vextra;          
+    elsif contador=3  then
+    resultado.EXAMEN_EXTRA2:=vextra;   
+    end if;
+
+    contador:=contador + 1;
+    -- Realiza las operaciones que desees con los valores obtenidos
+    -- Puedes usar las variables "variable_nombre_carrera" y "variable_nota_apr" aqu�
+
+     -- Sal del bucle cuando no haya m�s filas
+END LOOP;
+
+
+    CLOSE EXTRAS;
+
+
+
+
+    resultado.PAA:='PAA';
+    OPEN RResultado FOR
+    SELECT resultado.DNI,
+           resultado.Centro,
+           resultado.Nombre,
+           resultado.Direccion,
+           resultado.Correo,
+           resultado.Telefono,
+           resultado.PRIMERA_CARRERA,
+           resultado.NOTA_APROBATORIA,
+           resultado.SEGUNDA_CARRERA,
+           resultado.NOTA_APROBATORIA2,
+           resultado.PAA,
+           resultado.EXAMEN_EXTRA1,
+           resultado.EXAMEN_extra2
+    FROM DUAL; -- Utiliza DUAL si no tienes una tabla RESULTADO
+
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+
+
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_DEPARTAMENTOS_MATRICULA
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_DEPARTAMENTOS_MATRICULA" (RESULTADO OUT SYS_REFCURSOR, pN_CUENTA VARCHAR2)
+    IS
+    vCARRERA VARCHAR2(10);
+    BEGIN
+
+     SELECT CARRERA.ID INTO vCARRERA FROM car_disponible
+      INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID = CARRERA.ID
+      INNER JOIN ESTUDIANTE ON ESTUDIANTE.CAR_DISPONIBLE_ID = CAR_DISPONIBLE.ID
+      WHERE ESTUDIANTE.N_CUENTA = pN_CUENTA;
+
+    open resultado for SELECT distinct D.ID ,D.Nombre FROM PENSUM P
+    INNER JOIN ASIGNATURA A ON A.COD=P.ASIGNATURA_COD
+    INNER JOIN DEPTO D ON D.ID=A.DEPTO_ID
+    INNER JOIN CARRERA C ON C.ID=P.CARRERA_ID
+    WHERE C.ID=vCarrera; 
+
+
+    EXCEPTION 
+    WHEN OTHERS THEN
+    RESULTADO:=NULL;
+    END;
+
+
+
+
+
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_DNI_ASPIRANTES
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_DNI_ASPIRANTES" (rresultado out sys_refcursor)
+is 
+
+begin
+
+OPEN rresultado FOR select distinct persona_dni,correoelectronico from aspirante inner join persona on persona.dni=aspirante.persona_dni
+where aspirante.evaluado=0
+;
+
+
+
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_DOCENTES_JEFE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_DOCENTES_JEFE" (
+  c_DOCENTES OUT SYS_REFCURSOR,
+  p_N_EMPLEADO VARCHAR2
+) IS
+  p_carrera_jefe VARCHAR2(8 CHAR);
+BEGIN 
+
+  
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente
+  WHERE n_empleado = p_N_EMPLEADO;
+
+
+  OPEN c_DOCENTES FOR
+     SELECT DOCENTE.n_empleado, 
+           PrimerNombre || ' ' || Segundonombre || ' ' || pRIMERaPELLIDO || ' ' || sEGUNDOaPELLIDO AS Nombre_Completo, centro.nombre as Centro
+    FROM DOCENTE 
+    INNER JOIN PERSONA ON docente.persona_dni = persona.dni
+    INNER JOIN DEPTO_CENTRO ON DEPTO_CENTRO.ID=DOCENTE.DEPT_CENTRO_ID
+    INNER JOIN CENTRO ON DOCENTE.DEPT_CENTRO_ID=CENTRO.ID
+    WHERE DOCENTE.dept_centro_id = p_carrera_jefe;
+
+EXCEPTION
+  WHEN OTHERS THEN 
+
+    DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_ESTUDIANTES_MATRICULADOS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_ESTUDIANTES_MATRICULADOS" (RESULTADO OUT SYS_REFCURSOR)
+IS
+fechaActual date;
+BEGIN
+ 
+SELECT SYSDATE into  fechaActual FROM dual;
+
+open resultado for 
+select DISTINCT MATRICULA.ESTUDIANTE_N_CUENTA, persona.primernombre ||' '|| PERSONA.SEGUNDONOMBRE ||' '||persona.primerapellido ||' '|| PERSONA.SEGUNDOAPELLIDO AS NOMBRE 
+,CARRERA.NOM_CARRERA from
+MATRICULA
+INNER JOIN ESTUDIANTE ON MATRICULA.ESTUDIANTE_N_CUENTA =ESTUDIANTE.N_CUENTA
+INNER JOIN PERSONA ON PERSONA.DNI=PERSONA_DNI
+INNER JOIN CAR_DISPONIBLE ON ESTUDIANTE.CAR_DISPONIBLE_ID=CAR_DISPONIBLE.ID
+INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID=CARRERA.ID
+INNER JOIN Seccion ON MATRICULA.SECCION_ID=SECCION.ID
+INNER JOIN asignatura ON seccion.asignatura_cod = asignatura.cod
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (fechaActual BETWEEN FEC_PERIODO_INI AND FEC_PERIODO_FIN) and estado_mat_id='1';
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_ESTUDIANTES_MATRICULADOS2
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_ESTUDIANTES_MATRICULADOS2" (RESULTADO OUT SYS_REFCURSOR, p_N_CUENTA VARCHAR2)
+IS
+fechaActual date;
+BEGIN
+ 
+SELECT SYSDATE into  fechaActual FROM dual;
+
+open resultado for 
+select DISTINCT MATRICULA.ESTUDIANTE_N_CUENTA, persona.primernombre ||' '|| PERSONA.SEGUNDONOMBRE ||' '||persona.primerapellido ||' '|| PERSONA.SEGUNDOAPELLIDO AS NOMBRE 
+,CARRERA.NOM_CARRERA from
+MATRICULA
+INNER JOIN ESTUDIANTE ON MATRICULA.ESTUDIANTE_N_CUENTA =ESTUDIANTE.N_CUENTA
+INNER JOIN PERSONA ON PERSONA.DNI=PERSONA_DNI
+INNER JOIN CAR_DISPONIBLE ON ESTUDIANTE.CAR_DISPONIBLE_ID=CAR_DISPONIBLE.ID
+INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID=CARRERA.ID
+INNER JOIN Seccion ON MATRICULA.SECCION_ID=SECCION.ID
+INNER JOIN asignatura ON seccion.asignatura_cod = asignatura.cod
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (fechaActual BETWEEN FEC_PERIODO_INI AND FEC_PERIODO_FIN) and estado_mat_id='1' AND ESTUDIANTE.N_CUENTA LIKE (p_N_CUENTA || '%') AND ROWNUM <= 11; 
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_FOTOS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_FOTOS" (Resultado out sys_refcursor, pcuenta varchar2)
+IS
+BEGIN
+
+OPEN RESULTADO FOR SELECT FOTO FROM FOTO_PERFIL
+WHERE N_CUENTA=PCUENTA;
+
+EXCEPTION 
+WHEN OTHERS THEN
+RESULTADO:=NULL;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_INDICE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_INDICE" (
+    c_INDICE OUT SYS_REFCURSOR,
+    p_N_CUENTA VARCHAR2
+) IS
+    v_PUNTOS NUMBER;
+    v_UV NUMBER;
+BEGIN 
+
+    SELECT SUM(CALIFICACION*UV) INTO v_PUNTOS
+    FROM MATRICULA
+    INNER JOIN SECCION ON SECCION.ID = MATRICULA.SECCION_ID
+    INNER JOIN ASIGNATURA ON SECCION.ASIGNATURA_COD = ASIGNATURA.COD
+    WHERE MATRICULA.ESTUDIANTE_N_CUENTA = p_N_CUENTA AND MATRICULA.ESTADO_MAT_ID = 4;
+
+    SELECT SUM(UV) INTO v_UV
+    FROM MATRICULA
+    INNER JOIN SECCION ON SECCION.ID = MATRICULA.SECCION_ID
+    INNER JOIN ASIGNATURA ON SECCION.ASIGNATURA_COD = ASIGNATURA.COD
+    WHERE MATRICULA.ESTUDIANTE_N_CUENTA = p_N_CUENTA AND MATRICULA.ESTADO_MAT_ID = 4;
+
+    OPEN c_INDICE FOR SELECT ROUND(v_PUNTOS/v_UV) FROM DUAL;
+
+EXCEPTION
+    WHEN OTHERS THEN
+       DBMS_OUTPUT.PUT_LINE(SQLERRM);
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_LISTA_ESPERA
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_LISTA_ESPERA" (RESULTADO OUT sys_refcursor,SECCION VARCHAR2)
+IS
+BEGIN
+
+    open resultado for  SELECT  COUNT(*)
+    FROM matricula
+    WHERE matricula.estado_mat_id = '3' and seccion_id=seccion;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_LISTA_MATRICULADOS
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_LISTA_MATRICULADOS" (RESULTADO OUT sys_refcursor,SECCION VARCHAR2)
+IS
+BEGIN
+
+    open resultado for  SELECT  COUNT(*)
+    FROM matricula
+    WHERE matricula.estado_mat_id = '1' and seccion_id=seccion;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_NOTAS_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_NOTAS_ESTUDIANTE" (c_SECCIONES OUT SYS_REFCURSOR, v_N_CUENTA VARCHAR2)IS
+fechaActual date;
+BEGIN 
+select SYSDATE INTO fechaActual FROM DUAL;
+
+OPEN c_SECCIONES FOR select seccion.id as id_seccion,seccion.nombre as Seccion,asignatura.nombre as asignatura,matricula.CALIFICACION  from asignatura 
+inner join seccion on asignatura.cod = seccion.asignatura_cod
+inner join matricula on matricula.seccion_id = seccion.id
+inner join estudiante on matricula.estudiante_n_cuenta = estudiante.n_cuenta
+inner join docente on seccion.docente_n_empleado =docente.n_empleado
+inner join persona on persona.dni = docente.persona_dni
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+    WHERE (fechaActual between FEC_NOTA_INI AND FEC_NOTA_FIN) ANd
+ estudiante.n_cuenta = v_N_CUENTA AND matricula.estado_mat_id='1';
+ 
+ 
+EXCEPTION
+  WHEN OTHERS THEN
+
+    DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_PERMISO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_PERMISO" (CONFIRMACION OUT VARCHAR2 , p_INDICE NUMBER)IS
+CONTADOR NUMBER;
+BEGIN 
+CONTADOR :=0;  
+
+if p_INDICE IS NULL THEN
+
+SELECT COUNT(*) INTO CONTADOR FROM CONF_MATRICULA
+INNER JOIN PERIODO ON CONF_MATRICULA.PERIODO_PERIODO = PERIODO.PERIODO
+                        AND CONF_MATRICULA.PERIODO_DURACION_ID = PERIODO.DURACION_ID
+                        AND CONF_MATRICULA.PERIODO_A�O = PERIODO.A�O
+                       WHERE (SYSTIMESTAMP BETWEEN CONF_MATRICULA.FECHA_INICIO AND CONF_MATRICULA.FECHA_FINAL) AND conf_matricula.nombre = 'B y Primer Ingreso';
+
+
+
+ELSE
+
+SELECT COUNT(*) INTO CONTADOR FROM CONF_MATRICULA
+INNER JOIN PERIODO ON CONF_MATRICULA.PERIODO_PERIODO = PERIODO.PERIODO
+                        AND CONF_MATRICULA.PERIODO_DURACION_ID = PERIODO.DURACION_ID
+                        AND CONF_MATRICULA.PERIODO_A�O = PERIODO.A�O
+                       WHERE (SYSTIMESTAMP BETWEEN CONF_MATRICULA.FECHA_INICIO AND CONF_MATRICULA.FECHA_FINAL) AND (p_INDICE BETWEEN INDICE_INICIO AND INDICE_FINAL);
+
+
+END IF;
+
+
+   IF CONTADOR != 0 THEN
+   CONFIRMACION:= 'ES SU DIA DE MATRICULA';
+   ELSE
+   CONFIRMACION:='NO ES SU DIA DE MATRICULA';
+   END IF;
+
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_PERMISO2
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_PERMISO2" (CONFIRMACION OUT VARCHAR2 , PN_CUENTA VARCHAR2)IS
+CONTADOR NUMBER;
+ vDURACION VARCHAR2(10);
+  vCARRERA VARCHAR2(10);
+  vPERIODO VARCHAR2(50);
+  vA�O VARCHAR2(10);
+
+BEGIN 
+CONTADOR :=0;
+
+
+  -- Obtener Duracion del periodo
+  SELECT DURACION_ID, CARRERA.ID INTO vDURACION, vCARRERA FROM car_disponible
+  INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID = CARRERA.ID
+  INNER JOIN ESTUDIANTE ON ESTUDIANTE.CAR_DISPONIBLE_ID = CAR_DISPONIBLE.ID
+  WHERE ESTUDIANTE.N_CUENTA = pN_CUENTA;
+
+  -- Obtener periodo
+  SELECT PERIODO.PERIODO, PERIODO.A�O INTO vPERIODO, vA�O FROM periodo 
+  INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                         AND PERIODO.A�O = PERIODO_A�O
+                         AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+  WHERE (SYSDATE BETWEEN FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND PERIODO.DURACION_ID = vDURACION;
+
+
+SELECT COUNT(*) INTO CONTADOR FROM CONF_MATRICULA
+INNER JOIN PERIODO ON CONF_MATRICULA.PERIODO_PERIODO = PERIODO.PERIODO
+                        AND CONF_MATRICULA.PERIODO_DURACION_ID = PERIODO.DURACION_ID
+                        AND CONF_MATRICULA.PERIODO_A�O = PERIODO.A�O
+                       WHERE (SYSTIMESTAMP <= CONF_MATRICULA.FECHA_FINAL) and 
+                       conf_matricula.nombre = 'Adiciones y Cancelaciones' AND PERIODO.PERIODO=3 AND PERIODO.A�O='2023' AND PERIODO.DURACION_ID='1'
+                       ;
+
+   IF CONTADOR != 0 THEN
+   CONFIRMACION:= 'TIENE PERMITIDO CANCELAR';
+   ELSE
+   CONFIRMACION:='EL PERIODO DE CANCELACION YA VENCIO';
+   END IF;
+
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_SECCIONES_ASIGNATURA
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_SECCIONES_ASIGNATURA" (RESULTADO OUT SYS_REFCURSOR,  p_N_EMPLEADO VARCHAR2, p_Asignatura Varchar2)
+IS
+ p_carrera_jefe  VARCHAR2(10);
+fechaActual date;
+vperiodo number;
+va�o varchar2(20);
+BEGIN 
+
+
+SELECT SYSDATE into  fechaActual FROM dual;
+
+  
+   SELECT dept_centro_id INTO p_carrera_jefe
+  FROM docente 
+  WHERE n_empleado = p_N_EMPLEADO;
+ 
+  
+    OPEN RESULTADO FOR  
+SELECT DISTINCT seccion.id,seccion.nombre,persona.primernombre|| ' ' || persona.primerapellido as Nombre,edificio.nombre,aula.nombre,SUBSTR(TO_CHAR(seccion.horaincio, 'HH:MI'), 5, 5) AS hora_inicio,SUBSTR(TO_CHAR(seccion.horafinal, 'HH:MI'), 5, 5) AS hora_final,
+    seccion.cupos,    seccion.Lunes, seccion.martes,seccion.miercoles,seccion.jueves,seccion.viernes,seccion.sabado,seccion.domingo
+FROM seccion
+INNER JOIN asignatura ON seccion.asignatura_cod = asignatura.cod
+INNER JOIN DOCENTE ON DOCENTE.N_EMPLEADO = seccion.DOCENTE_N_EMPLEADO
+INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI=PERSONA.DNI
+INNER JOIN AULA ON AULA.ID = seccion.AULA_ID
+INNER JOIN EDIFICIO ON EDIFICIO.ID = EDIFICIO_ID  
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (fechaActual BETWEEN FEC_INI_PLAN AND FEC_FINAL_PLAN) AND DOCENTE.DEPT_CENTRO_ID= p_carrera_jefe and ASIGNATURA.COD= p_Asignatura and seccion.ESTADO!=0;
+    
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_SECCIONES_DOCENTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_SECCIONES_DOCENTE" (RESULTADO OUT SYS_REFCURSOR, N_EMPLEADO VARCHAR2)
+IS
+fechaActual date;
+BEGIN
+
+SELECT SYSDATE into  fechaActual FROM dual;
+
+open resultado for select seccion.id, seccion.nombre || ' - ' || asignatura.nombre  from Seccion 
+INNER JOIN asignatura ON seccion.asignatura_cod = asignatura.cod
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (fechaActual BETWEEN FEC_INI_PLAN AND FEC_FINAL_PLAN) and docente_n_empleado=N_Empleado;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_SECCIONES_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_SECCIONES_ESTUDIANTE" (c_SECCIONES OUT SYS_REFCURSOR, v_N_CUENTA VARCHAR2)IS
+vperiodo number;
+va�o varchar2(10);
+vduracion varchar(5);
+fechaActual varchar(50);
+
+BEGIN 
+
+SELECT SYSDATE into  fechaActual FROM dual;
+
+ 
+select distinct periodo_periodo,periodo_a�o,periodo.duracion_id into vperiodo,va�o,vduracion from estudiante inner join car_disponible on car_disponible.id=car_disponible_id
+inner join carrera on carrera.id=carrera_id
+inner join periodo on periodo.duracion_id=carrera.duracion_id
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+               AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (fechaActual between FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND estudiante.n_cuenta = v_N_CUENTA;
+
+
+ 
+
+OPEN c_SECCIONES FOR select seccion.id as id_seccion,seccion.nombre as Seccion,asignatura.nombre as asignatura,(persona.primernombre||' '||persona.primerapellido) as nombre_docente, EVALUACION.EVALUADA
+from asignatura 
+inner join seccion on asignatura.cod = seccion.asignatura_cod
+INNER JOIN EVALUACION ON SECCION.ID = evaluacion.fk_seccion_id
+inner join estudiante on EVALUACION.n_cuenta = estudiante.n_cuenta
+inner join docente on seccion.docente_n_empleado =docente.n_empleado
+inner join persona on persona.dni = docente.persona_dni
+where estudiante.n_cuenta = v_N_CUENTA and seccion.duracion_id=vduracion and seccion.periodo_id=vperiodo and seccion.a�o_id=va�o;
+
+
+
+
+EXCEPTION
+  WHEN OTHERS THEN
+
+    DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure OBTENER_S_REPO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."OBTENER_S_REPO" (c_SOLICITUD OUT SYS_REFCURSOR, p_N_CUENTA VARCHAR2)IS
+BEGIN
+
+
+OPEN c_SOLICITUD FOR SELECT persona.primernombre || ' ' || persona.primerapellido as Nombre, S_REPO.estudiante_n_cuenta, S_REPO.fecha_solicitud ,'SOLICITUD DE REPOSICION' as tipo, es_pagadp
+FROM S_REPO 
+inner join estudiante on estudiante.n_cuenta= S_REPO.estudiante_n_cuenta
+inner join persona on persona.dni = estudiante.persona_dni
+WHERE ESTUDIANTE.N_CUENTA =  p_N_CUENTA
+
+UNION
+
+select persona.primernombre || ' ' || persona.primerapellido as Nombre,estudiante_n_cuenta,fecha_solicitud,'SOLICITUD DE CAMBIO CENTRO' AS tipo, estado from s_cambio_centro
+INNER JOIN ESTUDIANTE ON ESTUDIANTE_N_CUENTA=ESTUDIANTE.N_CUENTA
+INNER JOIN PERSONA ON PERSONA.DNI=PERSONA_DNI
+WHERE ESTUDIANTE.N_CUENTA =  p_N_CUENTA
+
+UNION
+
+SELECT PERSONA.PRIMERNOMBRE || ' ' || PERSONA.PRIMERAPELLIDO AS NOMBRE,s_cambio_car.ESTUDIANTE_N_CUENTA, s_cambio_car.fecha_solicitud, 'SOLICITUD DE CAMBIO DE CARRERA ' AS TIPO ,s_cambio_car.estado  FROM s_cambio_car  
+INNER JOIN CAR_DISPONIBLE ON s_cambio_car.car_disponible_id = CAR_DISPONIBLE.ID
+INNER JOIN CARRERA ON CARRERA.ID = car_disponible.carrera_iD 
+INNER JOIN ESTUDIANTE ON ESTUDIANTE.N_CUENTA = s_cambio_car.ESTUDIANTE_N_CUENTA
+INNER JOIN PERSONA ON PERSONA.DNI  = ESTUDIANTE.PERSONA_DNI
+INNER JOIN CARRERAS_DEPTO ON s_cambio_car.CAR_DISPONIBLE_ID = CARRERAS_DEPTO.CARRERA_ID
+WHERE ESTUDIANTE.N_CUENTA =  p_N_CUENTA
+
+UNION
+
+SELECT PERSONA.PRIMERNOMBRE || ' ' || PERSONA.PRIMERAPELLIDO AS NOMBRE,s_cancel_exc.ESTUDIANTE_N_CUENTA, s_cancel_exc.fecha_solicitud, 'SOLICITUD DE CANCELACION EXCEPCIONAL ' AS TIPO ,s_cancel_exc.estado  
+FROM s_cancel_exc
+INNER JOIN ESTUDIANTE ON ESTUDIANTE.N_CUENTA = s_cancel_exc.ESTUDIANTE_N_CUENTA
+INNER JOIN PERSONA ON PERSONA.DNI  = ESTUDIANTE.PERSONA_DNI
+WHERE s_cancel_exc.estudiante_n_cuenta = p_N_CUENTA;
+ 
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure PERFIL_DOCENTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."PERFIL_DOCENTE" (c_PERFIL OUT SYS_REFCURSOR , p_SECCION VARCHAR2)IS
+BEGIN 
+
+OPEN c_PERFIL FOR SELECT PERSONA.PRIMERNOMBRE ||' '||PERSONA.SEGUNDONOMBRE|| ' ' || PERSONA.PRIMERAPELLIDO || ' ' || PERSONA.SEGUNDOAPELLIDO AS NOMBRE_DOCENTE, persona.correoelectronico, docente.fotoempleado, depto.nombre,seccion.nombre,ASIGNATURA.NOMBRE,seccion.asignatura_cod AS DEPARTAMENTO,seccion.video
+FROM DOCENTE
+INNER JOIN PERSONA ON DOCENTE.PERSONA_DNI = PERSONA.DNI
+INNER JOIN DEPTO_CENTRO ON docente.dept_centro_id = depto_centro.id
+INNER JOIN DEPTO ON depto_centro.depto_id =  depto.id
+INNER JOIN SECCION ON seccion.docente_n_empleado= docente.n_empleado
+INNER JOIN ASIGNATURA ON seccion.asignatura_cod = ASIGNATURA.COD
+WHERE SECCION.ID = p_SECCION;
+ 
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure PERFIL_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."PERFIL_ESTUDIANTE" (c_PERFIL OUT SYS_REFCURSOR , V_CUENTA VARCHAR2)IS
+BEGIN 
+
+OPEN c_PERFIL FOR SELECT PERSONA.PRIMERNOMBRE ||' '||PERSONA.SEGUNDONOMBRE|| ' ' || PERSONA.PRIMERAPELLIDO || ' ' || PERSONA.SEGUNDOAPELLIDO AS NOMBRE_ALUMNO,ESTUDIANTE.N_CUENTA ,  CARRERA.NOM_CARRERA, CENTRO.NOMBRE,PERSONA.CORREOELECTRONICO,estudiante.descripcion
+FROM ESTUDIANTE 
+INNER JOIN PERSONA ON ESTUDIANTE.PERSONA_DNI = PERSONA.DNI
+INNER JOIN CAR_DISPONIBLE ON estudiante.car_disponible_id=car_disponible.ID
+INNER JOIN CARRERA ON carrera.id = car_disponible.carrera_id
+INNER JOIN CENTRO ON CAR_DISPONIBLE.CENTRO_ID = centro.id
+WHERE estudiante.n_cuenta = V_CUENTA;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure PERFIL_ESTUDIANTE2
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."PERFIL_ESTUDIANTE2" (c_PERFIL OUT SYS_REFCURSOR)IS
+BEGIN 
+
+OPEN c_PERFIL FOR SELECT PERSONA.PRIMERNOMBRE ||' '||PERSONA.SEGUNDONOMBRE|| ' ' || PERSONA.PRIMERAPELLIDO || ' ' || PERSONA.SEGUNDOAPELLIDO AS NOMBRE_ALUMNO,ESTUDIANTE.N_CUENTA ,  CARRERA.NOM_CARRERA, CENTRO.NOMBRE,PERSONA.CORREOELECTRONICO,estudiante.descripcion,persona.dni
+FROM ESTUDIANTE 
+INNER JOIN PERSONA ON ESTUDIANTE.PERSONA_DNI = PERSONA.DNI
+INNER JOIN CAR_DISPONIBLE ON estudiante.car_disponible_id=car_disponible.ID
+INNER JOIN CARRERA ON carrera.id = car_disponible.carrera_id
+INNER JOIN CENTRO ON CAR_DISPONIBLE.CENTRO_ID = centro.id;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure PERFIL_MATRICULA_ESTUDIANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."PERFIL_MATRICULA_ESTUDIANTE" (RESULTADO OUT SYS_REFCURSOR, pN_CUENTA VARCHAR2)
+IS
+vUV number:=25;
+tUV number;
+vDURACION VARCHAR2(10);
+vN_CUENTA VARChAR2(20);
+vPERSONA VARCHAR2(200);
+vPERIODO VARCHAR2(50);
+vA�O VARCHAR2(10);
+
+ 
+BEGIN
+--Obtener datos  del estudiante
+SELECT N_CUENTA,persona.primernombre || ' ' || persona.SEGUNDOnombre || ' ' ||persona.primerapellido || ' ' ||persona.segundoapellido as nombre
+INTO vN_CUENTA,vPERSONA FROM Estudiante
+INNER JOIN PERSONA ON ESTUDIANTE.PERSONA_DNI=PERSONA.DNI
+WHERE ESTUDIANTE.N_CUENTA=pN_CUENTA;
+
+--Obtener Duracion del periodo
+
+select DURACION_ID into vDURACION from car_disponible
+INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID=CARRERA.ID
+INNER JOIN ESTUDIANTE ON ESTUDIANTE.CAR_DISPONIBLE_ID=CAR_DISPONIBLE.ID
+WHERE ESTUDIANTE.N_CUENTA=pN_CUENTA;
+
+--Obtener periodo
+select PERIODO.PERIODO, PERIODO.A�O INTO vPERIODO, vA�O from periodo 
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (SYSDATE BETWEEN FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND PERIODO.DURACION_ID=vDURACION;
+
+DECLARE
+CURSOR UNIDADESVALORATIVAS IS select ASIGNATURA.UV from seccion
+INNER JOIN MATRICULA ON SECCION.ID=MATRICULA.SECCION_ID
+INNER JOIN ASIGNATURA ON SECCION.ASIGNATURA_COD=ASIGNATURA.COD
+where periodo_id=vPERIODO and a�o_id=vA�O and duracion_id=vDURACION and MATRICULA.ESTUDIANTE_N_CUENTA=pN_CUENTA and matricula.estado_mat_id='1' and seccion.estado!=0;
+BEGIN
+
+open UNIDADESVALORATIVAS;
+LOOP
+FETCH UNIDADESVALORATIVAS INTO tUV;
+DBMS_OUTPUT.PUT_LINE(vUV);
+DBMS_OUTPUT.PUT_LINE(tUV);
+
+EXIT WHEN UNIDADESVALORATIVAS%NOtFOUND;
+vUV:=vUV-tuv;
+END LOOP;
+
+ OPEN RESULTADO FOR
+    SELECT vN_CUENTA, vPERSONA, vPERIODO, vA�O, vUV
+    FROM DUAL;
+END;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure PERIODO_ACTUAL
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."PERIODO_ACTUAL" (c_PERIODO OUT SYS_REFCURSOR)IS
+BEGIN 
+
+OPEN c_PERIODO FOR SELECT periodo.periodo,periodo.a�o FROM PERIODO
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (SYSDATE BETWEEN FEC_INI_PLAN AND FEC_FINAL_PLAN);
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure RESULTADOS_ASPIRANTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."RESULTADOS_ASPIRANTE" (
+    RResultado OUT SYS_REFCURSOR,
+    RDNI VARCHAR2
+    
+)
+IS
+    TYPE REGISTRO IS RECORD (
+        PRIMERA_CARRERA VARCHAR2(80),
+        MENS_APROBATORIO VARCHAR2(60),
+        SEGUNDA_CARRERA VARCHAR2(80),
+        MENS_APROBATORIO2 VARCHAR2(60),
+        PAA number,
+        EXAMEN_EXTRA1 VARCHAR2(10),
+        PUNT NUMBER,
+        EXAMEN_EXTRA2 VARCHAR2(10),
+        PUNT2 NUMBER
+    );
+
+    resultado REGISTRO;
+
+    cursor Carreras  is select carrera.Nom_carrera,carrera.nota_apr,aspirante.prioridad from carrera inner join car_disponible on car_disponible.carrera_id=carrera.id inner join aspirante
+    on aspirante.car_disponible_id=car_disponible.id  where aspirante.persona_dni=RDNI;
+
+    cursor extras is select distinct tipo_exam.nombre,PUNTUACION from  examen_admision inner join tipo_exam on examen_admision.tipo_exam_id=tipo_exam.id inner join aspirante
+    on aspirante.persona_dni=examen_admision.aspirante_persona_dni where aspirante.persona_dni=RDNI; 
+
+    vCarrera varchar2(80);
+    vNota number;
+    vExtra varchar2(10);
+    vPrioridad varchar2(5);
+    CONTADOR NUMBER;
+    vpuntuacion number;
+BEGIN
+
+
+    CONTADOR:=1;
+
+    open extras;
+
+    LOOP
+    FETCH extras INTO vextra,VPUNTUACION;
+    EXIT WHEN EXTRAS%NOTFOUND;
+
+    if contador=1 then
+        resultado.PAA:=VPUNTUACION; 
+
+    elsif contador=2 then
+             resultado.EXAMEN_EXTRA1:=vextra;    
+             resultado.punt:=VPUNTUACION;  
+
+    elsif contador=3  then
+
+    resultado.EXAMEN_EXTRA2:=vextra;   
+    resultado.punt2:=VPUNTUACION;  
+    end if;
+    contador:=contador + 1;
+    -- Realiza las operaciones que desees con los valores obtenidos
+    -- Puedes usar las variables "variable_nombre_carrera" y "variable_nota_apr" aqu�
+     -- Sal del bucle cuando no haya m�s filas
+END LOOP;
+
+
+    CLOSE EXTRAS;
+
+
+    open carreras;
+
+    LOOP
+    FETCH Carreras INTO vCarrera, vNota,vPrioridad;
+
+            if vPrioridad='1' then
+            resultado.PRIMERA_CARRERA:=vCarrera;
+
+            if vnota>resultado.PAA then
+
+                   resultado.MENS_APROBATORIO:='NO APROBO A SU CARRERA PRINCIPAL';
+            ELSE
+            resultado.MENS_APROBATORIO:='APROBO A SU CARRERA PRINCIPAL';
+            END IF;
+            end if;
+            if vPrioridad='2' then
+
+            resultado.SEGUNDA_CARRERA:=vCarrera;
+                  if vnota>resultado.PAA  then
+
+                   resultado.MENS_APROBATORIO2:='NO APROBO A SU CARRERA SECUNDARIA';
+            ELSE
+            resultado.MENS_APROBATORIO2:='APROBO A SU CARRERA SECUNDARIA';
+            END IF;                  
+            end if;
+
+    EXIT WHEN Carreras%NOTFOUND; -- Sal del bucle cuando no haya m�s filas
+END LOOP;
+
+
+    CLOSE Carreras;
+
+
+
+IF (resultado.PAA IS NULL) or (resultado.punt IS NULL) then
+resultado.PRIMERA_CARRERA:='UNAH22';
+END IF;
+OPEN RResultado FOR
+    SELECT
+
+           resultado.PRIMERA_CARRERA,
+           resultado.MENS_APROBATORIO,
+           resultado.SEGUNDA_CARRERA,
+           resultado.MENS_APROBATORIO2,
+           resultado.PAA,
+           resultado.EXAMEN_EXTRA1,
+           resultado.punt,
+           resultado.EXAMEN_extra2,
+           resultado.punt2
+    FROM DUAL; -- Utiliza DUAL si no tienes una tabla RESULTADO
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+
+dbms_Output.put_line(sqlerrm);
+    ROLLBACK;
+
+
+
+
+
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure SECCION_DOCENTE
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."SECCION_DOCENTE" (SECCIONES OUT SYS_REFCURSOR, p_N_EMPLEADO VARCHAR2)IS
+fechaActual Date;
+BEGIN
+    SELECT SYSDATE INTO fechaActual from dual;
+
+    OPEN SECCIONES FOR SELECT  seccion.id,SECCION.NOMBRE, ASIGNATURA.NOMBRE,SECCION.VIDEO FROM SECCION
+    INNER JOIN ASIGNATURA ON SECCION.ASIGNATURA_COD = ASIGNATURA.COD
+    INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID 
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+    WHERE (fechaActual between FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND
+    SECCION.DOCENTE_N_EMPLEADO = p_N_EMPLEADO;
+ 
+  
+    EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+ 
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure SP_CAMBIO_CAR
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."SP_CAMBIO_CAR" (CONFIRMACION OUT VARCHAR2,p_N_CUENTA VARCHAR2, p_CARRERA VARCHAR2, p_JUSTIFICACION VARCHAR2)IS
+v_CAR_ANT VARCHAR2(8);
+CONTADOR NUMBER;
+BEGIN 
+
+select COUNT(*) INTO CONTADOR from matricula 
+inner join seccion on matricula.seccion_id = seccion.id
+INNER JOIN PERIODO ON SECCION.PERIODO_ID=PERIODO.PERIODO
+                        AND SECCION.DURACION_ID=PERIODO.DURACION_ID
+                        AND SECCION.A�O_ID=PERIODO.A�O
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+                       AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+INNER JOIN ESTUDIANTE ON matricula.estudiante_n_cuenta = ESTUDIANTE.N_CUENTA
+                       WHERE (sysdate BETWEEN FEC_INI_PLAN AND FEC_FINAL_PLAN) AND estudiante.N_CUENTA = p_N_CUENTA AND matricula.estado_mat_id !=2;
+
+SELECT car_disponible_id INTO v_CAR_ANT FROM ESTUDIANTE 
+WHERE N_CUENTA = p_N_CUENTA;
+
+ 
+IF CONTADOR=0 THEN
+INSERT INTO s_cambio_car VALUES (SQ_CAMBIO_CAR.NEXTVAL, P_N_CUENTA,p_CARRERA,NULL,v_CAR_ANT,SYSDATE,p_JUSTIFICACION);
+CONFIRMACION:='SOLICITUD REALIZADA';
+ 
+ELSE
+CONFIRMACION:= 'USTED ESTA MATRICULADO EN EL PERIODO ACTUAL, POR LO TANTO NO PUEDE HACER CAMBIO DE CARRERA';
+commit;
+END IF;
+
+
+  EXCEPTION
+  
+  
+  WHEN OTHERS THEN 
+    -- Manejo de excepciones
+    confirmacion:= NULL;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure SP_CAMBIO_CENTRO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."SP_CAMBIO_CENTRO" (CONFIRMACION OUT VARCHAR2,p_N_CUENTA VARCHAR2, p_DOCUMENTO VARCHAR2, p_CENTRO VARCHAR2)IS
+BEGIN 
+
+INSERT INTO s_cambio_CENTRO VALUES (SQ_CAMBIO_CENTRO.NEXTVAL, p_DOCUMENTO,p_N_CUENTA,p_CENTRO,NULL,SYSDATE);
+CONFIRMACION:='SOLICITUD REALIZADA';
+commit;
+ EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    confirmacion:= NULL;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure SP_CANCELACION_EX
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."SP_CANCELACION_EX" (CONFIRMACION OUT VARCHAR2,p_N_CUENTA VARCHAR2, p_DOCUMENTO VARCHAR2,p_JUSTIFICACION VARCHAR2)IS
+VALOR varchar2(20);
+BEGIN 
+
+VALOR:=SQ_CANCEL_EX.NEXTVAL;
+
+INSERT INTO S_CANCEL_EXC VALUES (VALOR, p_DOCUMENTO,p_justificacion,P_N_CUENTA,NULL,SYSDATE);
+CONFIRMACION:=VALOR;
+commit;
+ EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    confirmacion:= NULL;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure SP_CANCELAR_SEC_EXC
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."SP_CANCELAR_SEC_EXC" (CONFIRMACION OUT varchar2, id_seccion varchar2,  id_cancel_exc varchar2)is
+begin
+
+insert into CANCELACIONES_SECCION_EXC values (SQ_CANCEL_EXC_SEC.NEXTVAL, id_seccion,id_cancel_exc);
+COMMIT; 
+
+ EXCEPTION
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    confirmacion:= NULL;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK;
+
+end;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure SP_REPO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."SP_REPO" (CONFIRMACION OUT VARCHAR2, p_N_CUENTA VARCHAR2, JUSTIFICACION VARCHAR2)IS
+CONTADOR NUMBER;
+vperiodo varchar2(20);
+va�o varchar2(20);
+BEGIN 
+
+
+select distinct periodo_periodo,periodo_a�o into vperiodo,va�o from estudiante inner join car_disponible on car_disponible.id=car_disponible_id
+inner join carrera on carrera.id=carrera_id
+inner join periodo on periodo.duracion_id=carrera.duracion_id
+INNER JOIN CONFIG_PERIOD ON PERIODO.PERIODO = PERIODO_PERIODO
+                       AND PERIODO.A�O = PERIODO_A�O
+               AND PERIODO.DURACION_ID = PERIODO_DURACION_ID
+WHERE (sysdate between FEC_PERIODO_INI AND FEC_PERIODO_FIN) AND estudiante.n_cuenta = p_N_CUENTA;
+
+
+
+INSERT INTO S_REPO VALUES (SQ_REPO.NEXTVAL,0,p_N_CUENTA,SYSDATE,JUSTIFICACION,vperiodo || ' ' ||va�o);
+CONFIRMACION:='SOLICITUD REALIZADA';
+commit;
+
+
+
+ EXCEPTION
+ WHEN DUP_VAL_ON_INDEX then
+ 
+CONFIRMACION:='USTED YA REALIZO UNA SOLICITUD DE PAGO DE REPOSICION ESTE PERIODO';
+
+  WHEN OTHERS THEN
+    -- Manejo de excepciones
+    confirmacion:= NULL;
+      DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    ROLLBACK; 
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure SP_SIGUIENTE_PERIODO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."SP_SIGUIENTE_PERIODO" (
+  p_CURSOR OUT SYS_REFCURSOR,
+    p_DURACION_ID IN varchar2
+  
+) AS
+    p_PERIODO NUMBER;
+    p_A�O  VARCHAR2(4);
+    v_next_period NUMBER;
+    v_next_year VARCHAR2(4);
+
+    CURSOR PERIODO_ACTUAL IS SELECT MAX(periodo) AS max_periodo, a�o
+    FROM periodo
+    WHERE duracion_id = p_DURACION_ID
+    GROUP BY a�o
+    ORDER BY a�o desc;
+BEGIN
+    -- Calcular el siguiente per�odo
+
+    OPEN PERIODO_ACTUAL;
+
+    FETCH PERIODO_ACTUAL INTO p_PERIODO,p_A�O;
+
+    IF p_DURACION_ID = 1 THEN
+        IF p_PERIODO = 3 THEN
+            v_next_period := 1;
+            v_next_year := TO_CHAR(TO_NUMBER(p_A�O) + 1);
+        ELSE
+            v_next_period := p_PERIODO + 1;
+            v_next_year := p_A�O;
+        END IF;
+    ELSIF p_DURACION_ID = 2 THEN
+        IF p_PERIODO = 2 THEN
+            v_next_period := 1;
+            v_next_year := TO_CHAR(TO_NUMBER(p_A�O) + 1);
+        ELSE
+            v_next_period := p_PERIODO + 1;
+            v_next_year := p_A�O;
+        END IF;
+    ELSE
+        v_next_period := p_PERIODO + 1;
+        v_next_year := p_A�O;
+    END IF;
+    CLOSE PERIODO_ACTUAL;
+    -- Abrir un cursor para el siguiente per�odo
+    OPEN p_CURSOR FOR
+    SELECT v_next_period AS PERIODO, v_next_year AS ANIO FROM DUAL;
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure TITULO_SECCION
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."TITULO_SECCION" (PSECCION OUT VARCHAR2,VSECCION VARCHAR2)
+IS 
+BEGIN
+
+SELECT SECCION.NOMBRE | | '-' || ASIGNATURA.NOMBRE INTO PSECCION FROM SECCION INNER JOIN ASIGNATURA ON SECCION.ASIGNATURA_COD=ASIGNATURA.COD 
+WHERE SECCION.ID=VSECCION;
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure VERIFICAR_CAMBIO_CAR
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."VERIFICAR_CAMBIO_CAR" (confirmacion out varchar2, id_solicitud number, verificacion varchar2)is
+v_CUENTA VARCHAR2(20);
+v_CAR_DISPONIBLE VARCHAR(20);
+v_CARRERA VARCHAR(20);
+v_CENTRO VARCHAR2(20);
+CONTADOR NUMBER;
+begin
+
+SELECT ESTUDIANTE_N_CUENTA, CAR_DISPONIBLE_ID INTO v_CUENTA,v_CARRERA FROM S_CAMBIO_CAR 
+WHERE ID = ID_SOLICITUD;
+
+SELECT CENTRO.ID INTO v_CENTRO FROM ESTUDIANTE 
+INNER JOIN CAR_DISPONIBLE ON estudiante.car_disponible_id =  CAR_DISPONIBLE.ID
+INNER JOIN CENTRO ON car_disponible.centro_id = CENTRO.ID
+WHERE ESTUDIANTE.N_CUENTA = v_CUENTA;
+
+SELECT COUNT(*) INTO CONTADOR FROM CAR_DISPONIBLE
+WHERE CARRERA_ID = v_CARRERA AND CENTRO_ID = v_CENTRO;
+
+
+
+IF VERIFICACION =1 THEN
+
+IF CONTADOR !=0 THEN
+
+SELECT CAR_DISPONIBLE.ID INTO v_CAR_DISPONIBLE FROM CAR_DISPONIBLE
+WHERE CARRERA_ID = v_CARRERA AND CENTRO_ID = v_CENTRO;
+
+
+UPDATE S_CAMBIO_CAR
+SET ESTADO = VERIFICACION
+WHERE id = id_solicitud;
+
+
+UPDATE ESTUDIANTE 
+SET CAR_DISPONIBLE_ID = v_CAR_DISPONIBLE
+WHERE ESTUDIANTE.N_CUENTA = v_CUENTA;
+COMMIT;
+confirmacion:='SOLICITUD ACEPTADA';
+
+
+ELSE
+UPDATE S_CAMBIO_CAR
+SET ESTADO = 0
+WHERE id = id_solicitud;
+COMMIT;
+confirmacion:='SOLICITUD DENEGADA YA QUE NO EXISTE ESTA CARRERA DENTRO DEL CENTRO';
+
+
+END IF;
+
+ELSE 
+
+confirmacion:='SOLICITUD DENEGADA';
+
+END IF;
+
+
+EXCEPTION
+    WHEN OTHERS THEN
+    confirmacion:= SQLERRM;
+       DBMS_OUTPUT.PUT_LINE(SQLERRM);
+
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure VERIFICAR_CAMBIO_CENTRO
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."VERIFICAR_CAMBIO_CENTRO" (confirmacion out varchar2, id_solicitud number, verificacion varchar2)is
+
+v_CUENTA VARCHAR2(20);
+v_CENTRO VARCHAR(20);
+v_CARRERA VARCHAR(20);
+v_CAR_DIPONIBLE VARCHAR(20);
+v_NUEVA_CAR_DISPONBIBLE VARCHAR(20);
+CONTADOR NUMBER;
+
+begin
+ 
+
+SELECT ESTUDIANTE_N_CUENTA, CENTRO_ID INTO v_CUENTA,v_CENTRO FROM S_CAMBIO_CENTRO 
+WHERE ID = ID_SOLICITUD;
+
+
+SELECT CARRERA.ID INTO v_CARRERA FROM  ESTUDIANTE
+INNER JOIN CAR_DISPONIBLE ON CAR_DISPONIBLE.ID = estudiante.car_disponible_id
+INNER JOIN CARRERA ON CAR_DISPONIBLE.CARRERA_ID = CARRERA.ID
+WHERE ESTUDIANTE.N_CUENTA = v_CUENTA;
+
+SELECT COUNT(*) INTO CONTADOR FROM CAR_DISPONIBLE
+WHERE CARRERA_ID = v_CARRERA AND CENTRO_ID = v_CENTRO;
+
+
+IF verificacion = 1 THEN
+
+
+
+IF CONTADOR != 0  THEN
+SELECT CAR_DISPONIBLE.ID INTO v_NUEVA_CAR_DISPONBIBLE FROM CAR_DISPONIBLE
+WHERE CARRERA_ID = v_CARRERA AND CENTRO_ID = v_CENTRO;
+
+UPDATE S_CAMBIO_CENTRO
+SET ESTADO = VERIFICACION
+WHERE id = id_solicitud;
+
+UPDATE ESTUDIANTE 
+SET CAR_DISPONIBLE_ID = v_NUEVA_CAR_DISPONBIBLE
+WHERE ESTUDIANTE.N_CUENTA = v_CUENTA;
+COMMIT;
+
+confirmacion:='SOLICITUD ACEPTADA'; 
+
+ELSE 
+
+confirmacion:='SOLICITUD DENEGADA YA QUE NO EXISTE ESA CARRERA EN EL CENTRO INGRESADO';
+
+UPDATE S_CAMBIO_CENTRO
+SET ESTADO = 0
+WHERE id = id_solicitud;
+
+commit;
+END IF;
+ELSE 
+
+
+UPDATE S_CAMBIO_CENTRO
+SET ESTADO = 0
+WHERE id = id_solicitud;
+
+commit;
+confirmacion:='SOLICITUD DENEGADA';
+
+END IF;
+
+
+
+EXCEPTION
+    WHEN OTHERS THEN
+    confirmacion:= NULL;
+       DBMS_OUTPUT.PUT_LINE(SQLERRM);
+END;
+°
+/
+--------------------------------------------------------
+--  DDL for Procedure VERIFICAR_S_CANCEL_EXC
+--------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."VERIFICAR_S_CANCEL_EXC" (confirmacion out varchar2, id_solicitud varchar2, verificacion varchar2)is
+v_CUENTA VARCHAR2(100);
+v_SECCION VARCHAR2(100);
+v_RESULT VARCHAR2(100);
+cursor c_CANCELACION_SECCION IS select id_seccion from CANCELACIONES_SECCION_EXC
+where cancelaciones_seccion_exc.id_s_can_exc = ID_SOLICITUD;
+begin
+
+
+
+SELECT ESTUDIANTE_N_CUENTA INTO v_CUENTA FROM S_CANCEL_EXC 
+WHERE ID = id_solicitud;
+
+
+IF VERIFICACION = 1 THEN
+
+
+OPEN  c_CANCELACION_SECCION;
+
+LOOP
+
+
+FETCH  c_CANCELACION_SECCION INTO v_SECCION;
+
+CANCELAR_ASIGNATURA_ESTUDIANTE(v_RESULT, v_CUENTA,v_SECCION );
+
+
+EXIT WHEN c_CANCELACION_SECCION%NOTFOUND;
+COMMIT;
+
+END LOOP;
+
+CLOSE  c_CANCELACION_SECCION;
+UPDATE S_CANCEL_EXC
+SET ESTADO = VERIFICACION
+WHERE id = id_solicitud;
+COMMIT;
+
+confirmacion:='SOLICITUD ACEPTADA';
+ELSE 
+
+UPDATE S_CANCEL_EXC
+SET ESTADO = 0
+WHERE id = id_solicitud;
+COMMIT;
+
+confirmacion:='SOLICITUD DENEGADA';
+
+END IF;
+
+
+EXCEPTION
+    WHEN OTHERS THEN
+    confirmacion:= NULL;
+       DBMS_OUTPUT.PUT_LINE(SQLERRM);
+
+
+
+END;
