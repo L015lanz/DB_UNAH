@@ -1,25 +1,17 @@
 from http.client import HTTPResponse
 from django.shortcuts import render
-from django.contrib.staticfiles import finders
-import os
-from DB_UNAH.settings import STATIC_ROOT
+from .analyzer import analyzer
+from django.http import JsonResponse
 
 def sequence(request):
-    print(STATIC_ROOT)
-
-    directorio_textos = os.path.join(STATIC_ROOT, 'script')
-    ruta_archivo = os.path.join(directorio_textos, 'sequence.txt')
-    with open(ruta_archivo, 'r') as archivo:
-        contenido = archivo.read()
-
-    if ruta_archivo:
-        with open(ruta_archivo, 'r') as archivo:
-            contenido = archivo.read()
-
-        return render(request, 'sequence.html', {'contenido': contenido})
-    else:
-        return HTTPResponse("El archivo no fue encontrado.")
+    analyzer_results=analyzer()
+    analyzer_results.find_statements("sequence.txt")
+    return render(request,"sequence.html",{"statements_names":analyzer_results.list_statement})
 
 def home(request):
     return render(request,"index.html")
 
+def sequence_detail(request,sequence):
+    analyzer_results=analyzer()
+    jsonresult=analyzer_results.sequence_details("sequence.txt",sequence)
+    return JsonResponse({"sequence":jsonresult})
