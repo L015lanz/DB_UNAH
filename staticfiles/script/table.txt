@@ -1,0 +1,431 @@
+CREATE TABLE "C##DBAUNAH"."ADMIN" 
+   (	"USUARIO" VARCHAR2(30 CHAR), 
+	"CONTRASE�A" VARCHAR2(200 CHAR), 
+	"PERSONA_DNI" VARCHAR2(15 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table ASIGNATURA
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."ASIGNATURA" 
+   (	"COD" VARCHAR2(12 CHAR), 
+	"NOMBRE" VARCHAR2(80 CHAR), 
+	"UV" NUMBER, 
+	"DEPTO_ID" VARCHAR2(20 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table ASPIRANTE
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."ASPIRANTE" 
+   (	"PERSONA_DNI" VARCHAR2(15 CHAR), 
+	"FOTOCERTIFICADO" VARCHAR2(200 CHAR), 
+	"CENTRO_ID" VARCHAR2(8 CHAR), 
+	"CAR_DISPONIBLE_ID" VARCHAR2(8 CHAR), 
+	"PRIORIDAD" VARCHAR2(5 BYTE), 
+	"EVALUADO" NUMBER(1,0)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table AULA
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."AULA" 
+   (	"ID" VARCHAR2(8 BYTE), 
+	"NOMBRE" VARCHAR2(50 CHAR), 
+	"EDIFICIO_ID" VARCHAR2(8 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table AULA_ASIG
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."AULA_ASIG" 
+   (	"DEPT_CENTRO_ID" VARCHAR2(8 CHAR), 
+	"AULA_ID" VARCHAR2(8 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table CANCELACIONES_SECCION_EXC
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."CANCELACIONES_SECCION_EXC" 
+   (	"ID" NUMBER, 
+	"ID_SECCION" VARCHAR2(15 CHAR), 
+	"ID_S_CAN_EXC" VARCHAR2(12 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table CARRERA
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."CARRERA" 
+   (	"ID" VARCHAR2(8 CHAR), 
+	"NOM_CARRERA" VARCHAR2(80 CHAR), 
+	"GRADO_ID" VARCHAR2(5 CHAR), 
+	"FACULTAD_ID" VARCHAR2(8 CHAR), 
+	"EX_EXTRA" VARCHAR2(5 CHAR), 
+	"DURACION_ID" VARCHAR2(5 CHAR), 
+	"NOTA_APR" NUMBER
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table CARRERAS_DEPTO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."CARRERAS_DEPTO" 
+   (	"ID" NUMBER, 
+	"CARRERA_ID" VARCHAR2(8 CHAR), 
+	"DEPTO_ID" VARCHAR2(20 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table CAR_DISPONIBLE
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."CAR_DISPONIBLE" 
+   (	"ID" VARCHAR2(8 CHAR), 
+	"CENTRO_ID" VARCHAR2(8 CHAR), 
+	"CARRERA_ID" VARCHAR2(8 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table CENTRO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."CENTRO" 
+   (	"ID" VARCHAR2(8 CHAR), 
+	"NOMBRE" VARCHAR2(80 CHAR), 
+	"ACRONIMO" VARCHAR2(10 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table CONFIG_PERIOD
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."CONFIG_PERIOD" 
+   (	"FEC_INI_PLAN" DATE, 
+	"FEC_FINAL_PLAN" DATE, 
+	"FEC_NOTA_INI" DATE, 
+	"FEC_NOTA_FIN" DATE, 
+	"PERIODO_PERIODO" NUMBER, 
+	"PERIODO_A�O" VARCHAR2(8 CHAR), 
+	"PERIODO_DURACION_ID" VARCHAR2(5 CHAR), 
+	"FEC_CAN_EXP_INI" DATE, 
+	"FEC_CAN_EXP_FIN" DATE, 
+	"FEC_PERIODO_INI" DATE, 
+	"FEC_PERIODO_FIN" DATE
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table CONF_MATRICULA
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."CONF_MATRICULA" 
+   (	"INDICE_INICIO" NUMBER, 
+	"INDICE_FINAL" NUMBER, 
+	"FECHA_INICIO" TIMESTAMP (6), 
+	"FECHA_FINAL" TIMESTAMP (6), 
+	"NOMBRE" VARCHAR2(50 CHAR), 
+	"PERIODO_PERIODO" NUMBER, 
+	"PERIODO_A�O" VARCHAR2(8 CHAR), 
+	"PERIODO_DURACION_ID" VARCHAR2(5 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table DEPTO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."DEPTO" 
+   (	"ID" VARCHAR2(20 BYTE), 
+	"NOMBRE" VARCHAR2(50 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table DEPTO_CENTRO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."DEPTO_CENTRO" 
+   (	"ID" VARCHAR2(8 BYTE), 
+	"DEPTO_ID" VARCHAR2(20 BYTE), 
+	"CENTRO_ID" VARCHAR2(8 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table DOCENTE
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."DOCENTE" 
+   (	"N_EMPLEADO" VARCHAR2(11 CHAR), 
+	"CONTRASE�A" VARCHAR2(200 CHAR), 
+	"FOTOEMPLEADO" VARCHAR2(500 CHAR), 
+	"PERSONA_DNI" VARCHAR2(15 CHAR), 
+	"ROL_ID" VARCHAR2(5 CHAR), 
+	"CAR_DISPONIBLE_ID" VARCHAR2(8 CHAR), 
+	"DEPT_CENTRO_ID" VARCHAR2(8 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table DURACION
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."DURACION" 
+   (	"ID" VARCHAR2(5 CHAR), 
+	"DESCRIPCION" VARCHAR2(20 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table EDIFICIO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."EDIFICIO" 
+   (	"ID" VARCHAR2(8 CHAR), 
+	"NOMBRE" VARCHAR2(20 CHAR), 
+	"CENTRO_ID" VARCHAR2(8 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table ESTADO_MAT
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."ESTADO_MAT" 
+   (	"ID" VARCHAR2(5 CHAR), 
+	"NOMBRE" VARCHAR2(20 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table ESTUDIANTE
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."ESTUDIANTE" 
+   (	"N_CUENTA" VARCHAR2(11 BYTE), 
+	"CONTRASE�A" VARCHAR2(200 CHAR), 
+	"DESCRIPCION" VARCHAR2(200 BYTE), 
+	"PERSONA_DNI" VARCHAR2(15 CHAR), 
+	"CAR_DISPONIBLE_ID" VARCHAR2(8 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table EVALUACION
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."EVALUACION" 
+   (	"ID_EVALUACION" NUMBER, 
+	"FK_SECCION_ID" VARCHAR2(15 CHAR), 
+	"N_CUENTA" VARCHAR2(11 BYTE), 
+	"OBSERVACIONES" VARCHAR2(200 CHAR), 
+	"EVALUADA" NUMBER(1,0), 
+	"AREA_PERSONAL" NUMBER(1,0), 
+	"AREA_PROFESIONAL" NUMBER(1,0), 
+	"AREA_ACADEMICA" NUMBER(1,0)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table EXAMEN_ADMISION
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."EXAMEN_ADMISION" 
+   (	"ID_EXAM" VARCHAR2(12 CHAR), 
+	"TIPO_EXAM_ID" VARCHAR2(5 CHAR), 
+	"PUNTUACION" NUMBER, 
+	"ASPIRANTE_PERSONA_DNI" VARCHAR2(15 CHAR), 
+	"ASPIRANTE_CAR_DISPONIBLE_ID" VARCHAR2(8 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table FACULTAD
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."FACULTAD" 
+   (	"ID" VARCHAR2(8 CHAR), 
+	"NOM_FACULTAD" VARCHAR2(80 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table FOTOS
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."FOTOS" 
+   (	"ID" VARCHAR2(10 CHAR), 
+	"URL" VARCHAR2(200 CHAR), 
+	"ESTUDIANTE_N_CUENTA" VARCHAR2(11 BYTE)
+   ) SEGMENT CREATION DEFERRED 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 
+ NOCOMPRESS LOGGING
+  TA
+  °BLESPACE "USERS" ;
+--------------------------------------------------------
+--  DDL for Table FOTO_PERFIL
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."FOTO_PERFIL" 
+   (	"N_CUENTA" VARCHAR2(11 BYTE), 
+	"FOTO" VARCHAR2(200 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table GRADO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."GRADO" 
+   (	"ID" VARCHAR2(5 CHAR), 
+	"TIPO" VARCHAR2(20 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table MATRICULA
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."MATRICULA" 
+   (	"CALIFICACION" NUMBER, 
+	"ESTUDIANTE_N_CUENTA" VARCHAR2(11 BYTE), 
+	"SECCION_ID" VARCHAR2(15 CHAR), 
+	"FECHA" DATE, 
+	"ESTADO_MAT_ID" VARCHAR2(5 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table PENSUM
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."PENSUM" 
+   (	"CARRERA_ID" VARCHAR2(8 CHAR), 
+	"ASIGNATURA_COD" VARCHAR2(12 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table PERIODO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."PERIODO" 
+   (	"PERIODO" NUMBER, 
+	"A�O" VARCHAR2(8 CHAR), 
+	"ACTIVO" NUMBER, 
+	"DURACION_ID" VARCHAR2(5 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table PERSONA
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."PERSONA" 
+   (	"DNI" VARCHAR2(15 CHAR), 
+	"PRIMERNOMBRE" VARCHAR2(20 CHAR), 
+	"SEGUNDONOMBRE" VARCHAR2(20 CHAR), 
+	"PRIMERAPELLIDO" VARCHAR2(20 CHAR), 
+	"SEGUNDOAPELLIDO" VARCHAR2(20 BYTE), 
+	"DIRECCION" VARCHAR2(200 CHAR), 
+	"CORREOELECTRONICO" VARCHAR2(60 CHAR), 
+	"TELEFONO" VARCHAR2(15 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table REQUISITOS
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."REQUISITOS" 
+   (	"ID_ASIGNATURA" VARCHAR2(12 BYTE), 
+	"ID_REQUISITO" VARCHAR2(12 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table ROL
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."ROL" 
+   (	"ID" VARCHAR2(5 CHAR), 
+	"ROL" VARCHAR2(20 CHAR)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table SECCION
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."SECCION" 
+   (	"ID" VARCHAR2(15 CHAR), 
+	"NOMBRE" VARCHAR2(10 CHAR), 
+	"HORAINCIO" INTERVAL DAY (2) TO SECOND (6), 
+	"HORAFINAL" INTERVAL DAY (2) TO SECOND (6), 
+	"CUPOS" NUMBER, 
+	"ASIGNATURA_COD" VARCHAR2(12 CHAR), 
+	"AULA_ID" VARCHAR2(8 BYTE), 
+	"DOCENTE_N_EMPLEADO" VARCHAR2(11 CHAR), 
+	"ESTADO" NUMBER, 
+	"JUSTIFICACION" VARCHAR2(200 CHAR), 
+	"LUNES" NUMBER(1,0), 
+	"MARTES" NUMBER(1,0), 
+	"MIERCOLES" NUMBER(1,0), 
+	"JUEVES" NUMBER(1,0), 
+	"VIERNES" NUMBER(1,0), 
+	"SABADO" NUMBER(1,0), 
+	"DOMINGO" NUMBER(1,0), 
+	"DURACION_ID" VARCHAR2(5 BYTE), 
+	"A�O_ID" VARCHAR2(8 BYTE), 
+	"PERIODO_ID" NUMBER, 
+	"VIDEO" VARCHAR2(200 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table S_CAMBIO_CAR
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."S_CAMBIO_CAR" 
+   (	"ID" VARCHAR2(12 CHAR), 
+	"ESTUDIANTE_N_CUENTA" VARCHAR2(11 BYTE), 
+	"CAR_DISPONIBLE_ID" VARCHAR2(8 CHAR), 
+	"ESTADO" NUMBER(1,0), 
+	"ANTIGUA_CAR" VARCHAR2(10 BYTE), 
+	"FECHA_SOLICITUD" DATE, 
+	"JUSTIFICACION" VARCHAR2(200 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table S_CAMBIO_CENTRO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."S_CAMBIO_CENTRO" 
+   (	"ID" VARCHAR2(12 CHAR), 
+	"JUSTIFICACION" VARCHAR2(200 CHAR), 
+	"ESTUDIANTE_N_CUENTA" VARCHAR2(11 BYTE), 
+	"CENTRO_ID" VARCHAR2(8 CHAR), 
+	"ESTADO" NUMBER(1,0), 
+	"FECHA_SOLICITUD" DATE
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table S_CANCEL_EXC
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."S_CANCEL_EXC" 
+   (	"ID" VARCHAR2(12 CHAR), 
+	"DOCUMENTO" VARCHAR2(200 CHAR), 
+	"JUSTIFICACION" VARCHAR2(200 CHAR), 
+	"ESTUDIANTE_N_CUENTA" VARCHAR2(11 BYTE), 
+	"ESTADO" NUMBER(1,0), 
+	"FECHA_SOLICITUD" DATE
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table S_REPO
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."S_REPO" 
+   (	"ID" VARCHAR2(12 CHAR), 
+	"ES_PAGADP" NUMBER, 
+	"ESTUDIANTE_N_CUENTA" VARCHAR2(11 BYTE), 
+	"FECHA_SOLICITUD" DATE, 
+	"JUSTIFICACION" VARCHAR2(200 BYTE), 
+	"PERIODO" VARCHAR2(100 BYTE)
+   )
+   ° 
+--------------------------------------------------------
+--  DDL for Table TIPO_EXAM
+--------------------------------------------------------
+
+  CREATE TABLE "C##DBAUNAH"."TIPO_EXAM" 
+   (	"ID" VARCHAR2(5 CHAR), 
+	"NOMBRE" VARCHAR2(10 CHAR), 
+	"DESCRIPCION" VARCHAR2(80 CHAR)
+   ) 

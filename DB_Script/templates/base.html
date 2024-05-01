@@ -10,7 +10,12 @@
 {%endblock%}
 </head>
 <body>
+
+    <div id="base-modal" class="">    
+        
+    </div>
     
+
 <section class="container nav-container">
     <nav class="navbar-DB">
         <section class="section-img">  
@@ -25,7 +30,7 @@
                 <a href="{%url 'DB_UNAH:procedure'%}" class="a-nav">Procedimientos Almacenados</a>
             </li>
             <li class="li-nav">
-                <a href="#" class="a-nav">Tablas</a>
+                <a href="{%url 'DB_UNAH:table'%}" class="a-nav">Tablas</a>
             </li>
             <li class="li-nav">
                 <a href="{%url 'DB_UNAH:sequence'%}" class="a-nav">Secuencias</a>
@@ -35,7 +40,11 @@
     </nav>
 </section>
 
+
+
+
 <section class="container block-container">
+    
 
     {% block content %}
     {% endblock %}
@@ -55,6 +64,7 @@
     </section>
 </div>
 </section>
+<script src="{%static 'js/main.js'%}"></script>
 <script src="https://kit.fontawesome.com/3ddafbe7b7.js" crossorigin="anonymous"></script>
 </body>
 </html>

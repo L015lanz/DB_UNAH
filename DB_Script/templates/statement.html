@@ -2,23 +2,25 @@
 {%load static%}
 
 {% block style %}
-<link rel="stylesheet" href="{%static 'css/procedure.css'%}">
+<link rel="stylesheet" href="{%static 'css/statement.css'%}">
+<link rel="stylesheet" href={{statement_css}}>
 {%endblock%}
 {% block content %}
 
 <div class="table-statement">
 {% for name in statements_names%}
-    <section class="row" onclick="moreinfo('{{name.lower}}')">
+    <section class="row">
     <div class="info">
         <div  class="statements_names">{{name}}</div>
-        <div  class="information" onclick="moreinfo('{{name.lower}}')">info <i class="fa-solid fa-plus"></i></div>
+        <div id="info{{name.lower}}" class="information" onclick="moreinfo('{{name.lower}}')"><i class="fa-solid fa-angle-down"></i></div>
     </div>
     <section id="{{name.lower}}"></section>
+
     </section>
 {% endfor%}
 </div>
 
-<script src="{%static 'js/procedure.js'%}"></script>
+<script src={{statement_js}}></script>
 {%endblock%}
 
 
