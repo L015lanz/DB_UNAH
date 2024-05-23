@@ -291,13 +291,11 @@ CREATE OR REPLACE PROCEDURE "C##DBAUNAH"."CANCELAR_ASIGNATURA_ESTUDIANTE" (resul
 IS 
 
 BEGIN
-  -- Obtener Duracion del periodo
-
+ 
 
 UPDATE MATRICULA
   SET ESTADO_MAT_ID =  '2'
-  WHERE ESTUDIANTE_N_CUENTA=PN_CUENTA AND SECCION_ID=PSECCION; -- Cambia esto por la condici�n que determine qu� filas actualizar
-
+  WHERE ESTUDIANTE_N_CUENTA=PN_CUENTA AND SECCION_ID=PSECCION; 
 
 delete from evaluacion where N_CUENTA = PN_CUENTA and FK_SECCION_ID = PSECCION;
 
@@ -3042,3 +3040,4 @@ EXCEPTION
 
 
 END;
+°
