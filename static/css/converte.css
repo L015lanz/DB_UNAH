@@ -1,0 +1,113 @@
+
+
+#conversor-button{
+    /* background-color: rgb(101, 165, 42); */
+    color: aliceblue;
+    font-size: 16px;
+    font-weight: 400;
+    padding: 10px 10px 10px 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    > i {
+        font-size: 2rem;
+    
+    }
+    > i:hover {
+        font-size: 2rem;
+        color: rgb(41, 41, 41);
+    }
+}
+
+.chart{
+    width: 100%;
+    min-height: 400px;
+}
+
+
+
+
+.currency{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.conversorContainer{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    border-radius: 15px;
+    padding: 10px 10px 10px 10px;
+    background-color: #0D6EFD;
+    color: aliceblue;
+    font-size: 16px;
+    box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.233);
+}
+
+.select-currency{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    border-radius: 10px 0px 0px 10px;
+    border: none;
+    border-right: 1px solid rgba(75, 75, 75, 0.514);
+}
+
+.input-qty{
+    display: flex;
+    max-width: 100px;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    border-radius: 0px 10px 10px 0px;
+    border: none;
+    outline: none;
+}
+
+.resultContainer{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    border-radius: 15px;
+    padding: 10px 10px 10px 10px;
+    font-size: 4rem;
+    font-weight: 700;
+}
+
+.content h1 {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+}
+
+
+.footer{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 10px 10px 10px 10px;
+    color: rgb(0, 0, 0);
+    font-size: 16px;
+    text-align: center;
+}
+
+.buttons{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 10px;
+}
