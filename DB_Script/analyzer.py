@@ -3,11 +3,6 @@ from DB_UNAH.settings import STATIC_ROOT
 import os
 import json
 
-
-
-
-
-
 class analyzer:
     def __init__(self):
         self.list_statement=[]

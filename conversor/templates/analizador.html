@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Análisis del Conversor</title>
+    <!-- Agrega el enlace al CDN de Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+    <!-- Navbar -->
+    <nav class="bg-blue-600">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <!-- Navbar Brand -->
+                <a href="{%url 'home:projects'%}" class="text-white">Otros Proyectos</a>
+
+                <!-- Navbar Toggler for Mobile -->
+                <button class="text-white focus:outline-none md:hidden">
+                    <svg class="h-6 w-6" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+
+                <!-- Navbar Menu -->
+                <div class="hidden md:flex md:flex-col md:items-end md:justify-center" id="navbarNav">
+                    <ul class="md:flex md:flex-row md:space-x-4">
+                        <!-- Regresar a conversor -->
+                        <li class="nav-item">
+                            <a class="text-white flex items-center" href="{%url 'conversor:conversor'%}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M7.7 4.3a1 1 0 0 1 1.4 1.4L4.42 10l4.65 4.3a1 1 0 0 1-1.32 1.5l-5-4.667a1 1 0 0 1 0-1.5l5-4.666a1 1 0 0 1 0-1.5zM15 9a1 1 0 0 0-1-1H3a1 1 0 1 0 0 2h11a1 1 0 0 0 1-1z" clip-rule="evenodd" />
+                                </svg>
+                                Regresar a conversor
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Análisis del Conversor</h1>
+        
+        <h2 class="text-2xl font-bold mb-2">Análisis Léxico</h2>
+        <table class="w-full mb-8">
+            <thead>
+                <tr>
+                    <th class="px-4 py-2">Línea</th>
+                    <th class="px-4 py-2">Tipo de Token</th>
+                    <th class="px-4 py-2">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for token in analisis_lexico %}
+                <tr>
+                    <td class="border px-4 py-2">{{ token.0 }}</td>
+                    <td class="border px-4 py-2">{{ token.1 }}</td>
+                    <td class="border px-4 py-2">{{ token.2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2 class="text-2xl font-bold mb-2">Resultado del Análisis Sintáctico</h2>
+        <p class="mb-4">{{ resultado_analisis }}</p>
+
+        <h2 class="text-2xl font-bold mb-2">Árbol de análisis sintáctico:</h2>
+        <pre class="bg-gray-200 p-4">{{ arbol_sintactico }}</pre>
+    </div>
+</body>
+</html>
