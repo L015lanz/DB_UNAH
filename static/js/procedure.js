@@ -2,7 +2,7 @@ function moreinfo(name){
     row=document.getElementById(name);
     infobtn=document.getElementById("info"+name);
 
-        fetch(`http://127.0.0.1:8000/procedures/${name}`)
+        fetch(`https://db-unah-app.azurewebsites.net/procedures/${name}`)
         .then((res) => res.json())
         .then((data)=>   {
             if (row.innerHTML==''){
